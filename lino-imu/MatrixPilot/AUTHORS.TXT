@@ -1,0 +1,10 @@
+Authors of MatrixPilot
+
+Bill Premerlani
+Ben Levitt
+Peter Hollands
+Adam Barrow
+
+Porting for Lino 4WD rover:
+Guido Ottaviani
+guido@guiott.com

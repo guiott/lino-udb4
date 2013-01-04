@@ -1,0 +1,143 @@
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vzpad.s 			page 1
+
+
+   1              	;*********************************************************************
+   2              	;                                                                    *
+   3              	;                       Software License Agreement                   *
+   4              	;                                                                    *
+   5              	;   The software supplied herewith by Microchip Technology           *
+   6              	;   Incorporated (the "Company") for its dsPIC controller            *
+   7              	;   is intended and supplied to you, the Company's customer,         *
+   8              	;   for use solely and exclusively on Microchip dsPIC                *
+   9              	;   products. The software is owned by the Company and/or its        *
+  10              	;   supplier, and is protected under applicable copyright laws. All  *
+  11              	;   rights are reserved. Any use in violation of the foregoing       *
+  12              	;   restrictions may subject the user to criminal sanctions under    *
+  13              	;   applicable laws, as well as to civil liability for the breach of *
+  14              	;   the terms and conditions of this license.                        *
+  15              	;                                                                    *
+  16              	;   THIS SOFTWARE IS PROVIDED IN AN "AS IS" CONDITION.  NO           *
+  17              	;   WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING,    *
+  18              	;   BUT NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND    *
+  19              	;   FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE     *
+  20              	;   COMPANY SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL,  *
+  21              	;   INCIDENTAL OR CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.  *
+  22              	;                                                                    *
+  23              	;   (c) Copyright 2003 Microchip Technology, All rights reserved.    *
+  24              	;*********************************************************************
+  25              	
+  26              		; Local inclusions.
+  29              		.list
+  30              	
+  31              	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  32              	
+  33              		.section .libdsp, code
+  34              	
+  35              	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  36              	;
+  37              	; _VectorZeroPad: pad with zeros the numZeros tail elements of a vector.
+  38              	;
+  39              	; Operation:
+  40              	;	dstV[n] = srcV[n], 0 <= n < numElems
+  41              	;	dstV[n] = 0, numElems <= n < numElems+numZeros
+  42              	; NOTE:
+  43              	;	srcV defined AT LEAST WITHIN 0 <= n < numElems
+  44              	;	dstV defined EXACTLY WITHIN 0 <= n < numElems+numZeros
+  45              	;
+  46              	; Input:
+  47              	;	w0 = number elements in source vector to be preserved (numElems)
+  48              	;	w1 = number elements to zero pad (numZeros)
+  49              	;	w2 = ptr to destination vector (dstV)
+  50              	;	w3 = ptr to source vector (srcV)
+  51              	; Return:
+  52              	;	w0 = ptr to destination vector (dstV)
+  53              	;
+  54              	; System resources usage:
+  55              	;	{w0..w6}	used, not restored
+  56              	;
+  57              	; DO and REPEAT instruction usage.
+  58              	;	no DO instructions
+  59              	;	1 level REPEAT intruction
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vzpad.s 			page 2
+
+
+  60              	;
+  61              	; Program words (24-bit instructions):
+  62              	;	13
+  63              	; plus program words from VectorCopy.
+  64              	;
+  65              	; Cycles (including C-function call and return overheads):
+  66              	;	18 + numZeros
+  67              	; plus cycles from VectorCopy.
+  68              	; NOTE that the VectorCopy source code reports the number of cycles
+  69              	; including 3 cycles of C-function call overhead. Thus, the number of
+  70              	; actual cycles from VectorCopy to add to VectorWindow is 3 less
+  71              	; than whatever number of cycles it takes a stand alone VectorCopy.
+  72              	;............................................................................
+  73              	
+  74              		; External symbols.
+  75              		.extern	_VectorCopy
+  76              	
+  77              		.global	_VectorZeroPad	; export
+  78              	_VectorZeroPad:
+  79              	
+  80 000000  00 00 F8 		push	RCOUNT
+  81              	
+  82              	;............................................................................
+  83              	
+  84 000002  02 03 78 		mov	w2,w6				; save return value (dstV)
+  85              	
+  86              		; Copy numElems from srcV to dstV.
+  87 000004  00 02 D0 		sl	w0,w4				; w4 = sizeof(numElems)
+  88 000006  81 02 E9 		dec	w1,w5				; w5 = numZeros-1
+  89 000008  82 00 78 		mov	w2,w1				; w1-> dstV[0]
+  90 00000a  03 01 78 		mov	w3,w2				; w2-> srcV[0]
+  91 00000c  00 00 02 		call _VectorCopy
+  91         00 00 00 
+  92              							; now w0-> dstV[0]
+  93              		; Advance to zero padding area.
+  94 000010  04 00 40 		add	w0,w4,w0			; w0-> dstV[numElems]
+  95 000012  01 00 20 		mov	#0,w1
+  96 000014  05 80 09 		repeat	w5				; do (numZeros-1)+1 times
+  97 000016  01 18 78 		mov	w1,[w0++]			; dstV[n] = 0
+  98              							; w0-> dstV[n+1]
+  99              	
+ 100 000018  06 00 78 		mov	w6,w0				; restore return value
+ 101              	
+ 102              	;............................................................................
+ 103              	
+ 104 00001a  00 00 F9 		pop		RCOUNT
+ 105              	
+ 106 00001c  00 00 06 		return	
+ 107              	
+ 108              	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ 109              	
+ 110              		.end
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vzpad.s 			page 3
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 fake
+                            *ABS*:00000001 PSV_ERRATA
+                            *ABS*:00000001 __MPLAB_BUILD
+                            *ABS*:00000001 __33FJ256GP710A
+                            *ABS*:00000001 __dsPIC33F
+                            *ABS*:00000001 __HAS_DSP
+                            *ABS*:00000001 __HAS_DMA
+                            *ABS*:00000001 __HAS_CODEGUARD
+                            *ABS*:00000001 __C30COFF
+../../libVectorMatrix/vzpad.s:78     .libdsp:00000000 _VectorZeroPad
+
+UNDEFINED SYMBOLS
+_VectorCopy
+RCOUNT
+
+EQUATE SYMBOLS
+                      PSV_ERRATA = 0x1
+                   __MPLAB_BUILD = 0x1
+                 __33FJ256GP710A = 0x1
+                      __dsPIC33F = 0x1
+                       __HAS_DSP = 0x1
+                       __HAS_DMA = 0x1
+                 __HAS_CODEGUARD = 0x1
+                       __C30COFF = 0x1

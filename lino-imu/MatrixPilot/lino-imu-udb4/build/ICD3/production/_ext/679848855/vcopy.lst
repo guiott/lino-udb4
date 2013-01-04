@@ -1,0 +1,119 @@
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vcopy.s 			page 1
+
+
+   1              	;*********************************************************************
+   2              	;                                                                    *
+   3              	;                       Software License Agreement                   *
+   4              	;                                                                    *
+   5              	;   The software supplied herewith by Microchip Technology           *
+   6              	;   Incorporated (the "Company") for its dsPIC controller            *
+   7              	;   is intended and supplied to you, the Company's customer,         *
+   8              	;   for use solely and exclusively on Microchip dsPIC                *
+   9              	;   products. The software is owned by the Company and/or its        *
+  10              	;   supplier, and is protected under applicable copyright laws. All  *
+  11              	;   rights are reserved. Any use in violation of the foregoing       *
+  12              	;   restrictions may subject the user to criminal sanctions under    *
+  13              	;   applicable laws, as well as to civil liability for the breach of *
+  14              	;   the terms and conditions of this license.                        *
+  15              	;                                                                    *
+  16              	;   THIS SOFTWARE IS PROVIDED IN AN "AS IS" CONDITION.  NO           *
+  17              	;   WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING,    *
+  18              	;   BUT NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND    *
+  19              	;   FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE     *
+  20              	;   COMPANY SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL,  *
+  21              	;   INCIDENTAL OR CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.  *
+  22              	;                                                                    *
+  23              	;   (c) Copyright 2003 Microchip Technology, All rights reserved.    *
+  24              	;*********************************************************************
+  25              	
+  26              		; Local inclusions.
+  29              		.list
+  30              	
+  31              	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  32              	
+  33              		.section .libdsp, code
+  34              	
+  35              	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  36              	;
+  37              	; _VectorCopy: initialization to zero of FIR filter delay.
+  38              	;
+  39              	; Operation:
+  40              	;	dstV[n] = srcV[n], 0 <= n < numElems
+  41              	;
+  42              	; Input:
+  43              	;	w0 = number elements to copy from source vector (numElems)
+  44              	;	w1 = ptr to destination vector (dstV)
+  45              	;	w2 = ptr to source vector (srcV)
+  46              	; Return:
+  47              	;	w0 = ptr to destination vector (dstV)
+  48              	;
+  49              	; System resources usage:
+  50              	;	{w0..w3}	used, not restored
+  51              	;
+  52              	; DO and REPEAT instruction usage.
+  53              	;	no DO instructions
+  54              	;	1 level REPEAT intruction
+  55              	;
+  56              	; Program words (24-bit instructions):
+  57              	;	6
+  58              	;
+  59              	; Cycles (including C-function call and return overheads):
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vcopy.s 			page 2
+
+
+  60              	;	12 + numElems
+  61              	;............................................................................
+  62              	
+  63              		.global	_VectorCopy	; export
+  64              	_VectorCopy:
+  65              	
+  66 000000  00 00 F8 		push	RCOUNT
+  67              	
+  68              	;............................................................................
+  69              	
+  70 000002  81 01 78 		mov	w1,w3				; save return value (dstV)
+  71              	
+  72 000004  00 00 E9 		dec	w0,w0				; w0 = numElems-1
+  73 000006  00 80 09 		repeat	w0				; do (numElems-1)+1 times
+  74 000008  B2 18 78 		mov	[w2++],[w1++]			; dstV[n] = srcV[n]
+  75              							; w1-> dstV[n+1]
+  76              							; w2-> srcV[n+1]
+  77              	
+  78 00000a  03 00 78 		mov	w3,w0				; restore return value
+  79              	
+  80              	;............................................................................
+  81              	
+  82 00000c  00 00 F9 		pop		RCOUNT
+  83              	
+  84 00000e  00 00 06 		return	
+  85              	
+  86              	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  87              	
+  88              		.end
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vcopy.s 			page 3
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 fake
+                            *ABS*:00000001 PSV_ERRATA
+                            *ABS*:00000001 __MPLAB_BUILD
+                            *ABS*:00000001 __33FJ256GP710A
+                            *ABS*:00000001 __dsPIC33F
+                            *ABS*:00000001 __HAS_DSP
+                            *ABS*:00000001 __HAS_DMA
+                            *ABS*:00000001 __HAS_CODEGUARD
+                            *ABS*:00000001 __C30COFF
+../../libVectorMatrix/vcopy.s:64     .libdsp:00000000 _VectorCopy
+
+UNDEFINED SYMBOLS
+RCOUNT
+
+EQUATE SYMBOLS
+                      PSV_ERRATA = 0x1
+                   __MPLAB_BUILD = 0x1
+                 __33FJ256GP710A = 0x1
+                      __dsPIC33F = 0x1
+                       __HAS_DSP = 0x1
+                       __HAS_DMA = 0x1
+                 __HAS_CODEGUARD = 0x1
+                       __C30COFF = 0x1

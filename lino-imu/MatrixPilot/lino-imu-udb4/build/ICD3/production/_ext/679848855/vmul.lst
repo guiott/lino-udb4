@@ -1,0 +1,267 @@
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vmul.s 			page 1
+
+
+   1              	;*********************************************************************
+   2              	;                                                                    *
+   3              	;                       Software License Agreement                   *
+   4              	;                                                                    *
+   5              	;   The software supplied herewith by Microchip Technology           *
+   6              	;   Incorporated (the "Company") for its dsPIC controller            *
+   7              	;   is intended and supplied to you, the Company's customer,         *
+   8              	;   for use solely and exclusively on Microchip dsPIC                *
+   9              	;   products. The software is owned by the Company and/or its        *
+  10              	;   supplier, and is protected under applicable copyright laws. All  *
+  11              	;   rights are reserved. Any use in violation of the foregoing       *
+  12              	;   restrictions may subject the user to criminal sanctions under    *
+  13              	;   applicable laws, as well as to civil liability for the breach of *
+  14              	;   the terms and conditions of this license.                        *
+  15              	;                                                                    *
+  16              	;   THIS SOFTWARE IS PROVIDED IN AN "AS IS" CONDITION.  NO           *
+  17              	;   WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING,    *
+  18              	;   BUT NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND    *
+  19              	;   FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE     *
+  20              	;   COMPANY SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL,  *
+  21              	;   INCIDENTAL OR CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.  *
+  22              	;                                                                    *
+  23              	;   (c) Copyright 2003 Microchip Technology, All rights reserved.    *
+  24              	;*********************************************************************
+  25              	
+  26              		; Local inclusions.
+  29              		.list
+  30              	
+  31              	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  32              	
+  33              		.section .libdsp, code
+  34              	
+  35              	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  36              	;
+  37              	; _VectorMultiply: Vector Multiply.
+  38              	;
+  39              	; Operation:
+  40              	;	dstV[n] = srcV1[n] * srcV2[n], with
+  41              	;
+  42              	; n in {0, 1,... , numElems-1}
+  43              	;
+  44              	; Input:
+  45              	;	w0 = number elements in vector(s) (numElems)
+  46              	;	w1 = ptr to destination vector (dstV)
+  47              	;	w2 = ptr to source one vector (srcV1)
+  48              	;	w3 = ptr to source two vector (srcV2)
+  49              	; Return:
+  50              	;	w0 = ptr to destination vector (dstV)
+  51              	;
+  52              	; System resources usage:
+  53              	;	{w0..w5}	used, not restored
+  54              	;	 AccuA		saved, used, restored
+  55              	;	 CORCON		saved, used, restored
+  56              	;
+  57              	; DO and REPEAT instruction usage.
+  58              	;	1 level DO instruction
+  59              	;	no REPEAT intructions
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vmul.s 			page 2
+
+
+  60              	;
+  61              	; Program words (24-bit instructions):
+  62              	;	14
+  63              	;
+  64              	; Cycles (including C-function call and return overheads):
+  65              	;	17 + 4*numElems
+  66              	;............................................................................
+  67              	
+  68              		.global	_VectorMultiply	; export
+  69              	_VectorMultiply:
+  70              	
+  71              	;	save the 40 bit A accumulator
+  72 000000  00 00 F8 		push	ACCAL
+  73 000002  00 00 F8 		push	ACCAH
+  74 000004  00 00 F8 		push	ACCAU
+  75              	
+  76              	;............................................................................
+  77              	
+  78              		; Save working registers.
+  79              		; None to save...
+  80              	
+  81              	;............................................................................
+  82              	
+  83              		; Prepare CORCON for fractional computation.
+  84 000006  44 00 F8 		push	CORCON
+  85              		fractsetup	w4
+  85 000008  04 0F 20 	> mov #FRACT_MODE,w4
+  85 00000a  24 02 88 	> mov w4,CORCON
+  86              	
+  87              	;............................................................................
+  88              	
+  89 00000c  81 1F 78 		push	w1				; save return value (dstV)
+  90              	
+  91              	;............................................................................
+  92              	
+  93              		; Prepare operation.
+  94 00000e  00 00 E9 		dec	w0,w0				; w0 = numElems-1
+  95              	
+  96              	;	save the do loop registers
+  97 000010  00 00 F8 		push	DCOUNT
+  98 000012  00 00 F8 		push	DOSTARTL
+  99 000014  00 00 F8 		push	DOSTARTH
+ 100 000016  00 00 F8 		push	DOENDL
+ 101 000018  00 00 F8 		push	DOENDH
+ 102              	
+ 103              		; Perform operation.
+ 104 00001a  00 80 08 		do	w0,_endMul		; {	; do (numElems-1)+1 times
+ 104         00 00 00 
+ 105 00001e  32 02 78 		mov	[w2++],w4			; w4 = srcV[n]
+ 106              							; w2-> srcV[n+1]
+ 107 000020  B3 02 78 		mov	[w3++],w5			; w5 = srcV2[n]
+ 108              							; w3-> srcV2[n+1]
+ 109 000022  13 01 C0 		mpy	w4*w5,a				; a = srcV1[n]*srcV2[n]
+ 110              	_endMul:
+ 111 000024  31 00 CD 		sac.r	a,[w1++]			; dstV[n] = srcV1[n]*srcV2[n]
+ 112              							; w1-> dstV[n+1]
+ 113              	
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vmul.s 			page 3
+
+
+ 114              	;	restore the do loop registers
+ 115 000026  00 00 F9 		pop		DOENDH
+ 116 000028  00 00 F9 		pop		DOENDL
+ 117 00002a  00 00 F9 		pop		DOSTARTH
+ 118 00002c  00 00 F9 		pop		DOSTARTL
+ 119 00002e  00 00 F9 		pop		DCOUNT
+ 120              	
+ 121              	; }
+ 122              	
+ 123              	;............................................................................
+ 124              	
+ 125 000030  4F 00 78 		pop	w0				; restore return value
+ 126              	
+ 127              	;............................................................................
+ 128              	
+ 129              		; restore CORCON.
+ 130 000032  44 00 F9 		pop	CORCON
+ 131              	
+ 132              	;............................................................................
+ 133              	
+ 134              		; Restore working registers.
+ 135              		; None to restore...
+ 136              	
+ 137              	;............................................................................
+ 138              	
+ 139              	;	restore the 40 bit A accumulator
+ 140 000034  00 00 F9 		pop		ACCAU
+ 141 000036  00 00 F9 		pop		ACCAH
+ 142 000038  00 00 F9 		pop		ACCAL
+ 143              	
+ 144 00003a  00 00 06 		return	
+ 145              	
+ 146              	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ 147              	
+ 148              		.end
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vmul.s 			page 4
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 ../../libVectorMatrix/dspcommon.inc
+                            *ABS*:00000000 ../../libVectorMatrix/vmul.s
+                            *ABS*:00000001 PSV_ERRATA
+                            *ABS*:00000001 __MPLAB_BUILD
+                            *ABS*:00000001 __33FJ256GP710A
+                            *ABS*:00000001 __dsPIC33F
+                            *ABS*:00000001 __HAS_DSP
+                            *ABS*:00000001 __HAS_DMA
+                            *ABS*:00000001 __HAS_CODEGUARD
+                            *ABS*:00000001 __C30COFF
+../../libVectorMatrix/dspcommon.inc:34     *ABS*:00000002 kSof
+../../libVectorMatrix/dspcommon.inc:37     *ABS*:00005a82 kSinPiQ
+../../libVectorMatrix/dspcommon.inc:38     *ABS*:00005a82 kInvSqrt2
+../../libVectorMatrix/dspcommon.inc:44     *ABS*:00000034 PSVPAG
+../../libVectorMatrix/dspcommon.inc:45     *ABS*:00000044 CORCON
+../../libVectorMatrix/dspcommon.inc:46     *ABS*:00000046 MODCON
+../../libVectorMatrix/dspcommon.inc:47     *ABS*:00000050 XBREV
+../../libVectorMatrix/dspcommon.inc:48     *ABS*:00000048 XMODSRT
+../../libVectorMatrix/dspcommon.inc:49     *ABS*:0000004a XMODEND
+../../libVectorMatrix/dspcommon.inc:50     *ABS*:0000004c YMODSRT
+../../libVectorMatrix/dspcommon.inc:51     *ABS*:0000004e YMODEND
+../../libVectorMatrix/dspcommon.inc:56     *ABS*:00000080 SATA_ON
+../../libVectorMatrix/dspcommon.inc:57     *ABS*:00000040 SATB_ON
+../../libVectorMatrix/dspcommon.inc:58     *ABS*:00000020 SATDW_ON
+../../libVectorMatrix/dspcommon.inc:59     *ABS*:00000010 ACCSAT_ON
+../../libVectorMatrix/dspcommon.inc:60     *ABS*:000000f0 FRACT_SET
+../../libVectorMatrix/dspcommon.inc:62     *ABS*:fffffffd RND_OFF
+../../libVectorMatrix/dspcommon.inc:63     *ABS*:fffffffe IF_OFF
+../../libVectorMatrix/dspcommon.inc:64     *ABS*:fffffffc FRACT_RESET
+../../libVectorMatrix/dspcommon.inc:66     *ABS*:000000f0 FRACT_MODE
+../../libVectorMatrix/dspcommon.inc:75     *ABS*:00000004 PSV_ON
+../../libVectorMatrix/dspcommon.inc:96     *ABS*:0000ff00 COEFFS_IN_DATA
+../../libVectorMatrix/dspcommon.inc:99     *ABS*:00000000 oNumCoeffs
+../../libVectorMatrix/dspcommon.inc:100    *ABS*:00000002 oCoeffsBase
+../../libVectorMatrix/dspcommon.inc:102    *ABS*:00000004 oCoeffsEnd
+../../libVectorMatrix/dspcommon.inc:104    *ABS*:00000006 oCoeffsPage
+../../libVectorMatrix/dspcommon.inc:106    *ABS*:00000008 oDelayBase
+../../libVectorMatrix/dspcommon.inc:108    *ABS*:0000000a oDelayEnd
+../../libVectorMatrix/dspcommon.inc:110    *ABS*:0000000c oDelay
+../../libVectorMatrix/dspcommon.inc:116    *ABS*:00000000 oOrder
+../../libVectorMatrix/dspcommon.inc:117    *ABS*:00000002 oKappaVals
+../../libVectorMatrix/dspcommon.inc:118    *ABS*:00000004 oGammaVals
+../../libVectorMatrix/dspcommon.inc:119    *ABS*:00000006 oLattCoeffsPage
+../../libVectorMatrix/dspcommon.inc:120    *ABS*:00000008 oLattDelay
+../../libVectorMatrix/vmul.s:69     .libdsp:00000000 _VectorMultiply
+../../libVectorMatrix/vmul.s:110    .libdsp:00000024 _endMul
+
+UNDEFINED SYMBOLS
+ACCAL
+ACCAH
+ACCAU
+DCOUNT
+DOSTARTL
+DOSTARTH
+DOENDL
+DOENDH
+MPLAB ASM30 Listing:  ../../libVectorMatrix/vmul.s 			page 5
+
+
+
+EQUATE SYMBOLS
+../../libVectorMatrix/dspcommon.inc = 0x0
+    ../../libVectorMatrix/vmul.s = 0x0
+                      PSV_ERRATA = 0x1
+                   __MPLAB_BUILD = 0x1
+                 __33FJ256GP710A = 0x1
+                      __dsPIC33F = 0x1
+                       __HAS_DSP = 0x1
+                       __HAS_DMA = 0x1
+                 __HAS_CODEGUARD = 0x1
+                       __C30COFF = 0x1
+                            kSof = 0x2
+                         kSinPiQ = 0x5a82
+                       kInvSqrt2 = 0x5a82
+                          PSVPAG = 0x34
+                          CORCON = 0x44
+                          MODCON = 0x46
+                           XBREV = 0x50
+                         XMODSRT = 0x48
+                         XMODEND = 0x4a
+                         YMODSRT = 0x4c
+                         YMODEND = 0x4e
+                         SATA_ON = 0x80
+                         SATB_ON = 0x40
+                        SATDW_ON = 0x20
+                       ACCSAT_ON = 0x10
+                       FRACT_SET = 0xf0
+                         RND_OFF = 0xfffffffd
+                          IF_OFF = 0xfffffffe
+                     FRACT_RESET = 0xfffffffc
+                      FRACT_MODE = 0xf0
+                          PSV_ON = 0x4
+                  COEFFS_IN_DATA = 0xff00
+                      oNumCoeffs = 0x0
+                     oCoeffsBase = 0x2
+                      oCoeffsEnd = 0x4
+                     oCoeffsPage = 0x6
+                      oDelayBase = 0x8
+                       oDelayEnd = 0xa
+                          oDelay = 0xc
+                          oOrder = 0x0
+                      oKappaVals = 0x2
+                      oGammaVals = 0x4
+                 oLattCoeffsPage = 0x6
+                      oLattDelay = 0x8
