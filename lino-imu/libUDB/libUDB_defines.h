@@ -141,9 +141,9 @@ Otherwise, please remove the CLOCK_CONFIG line from your options.h file."
 
 #else
 #define BOARD_IS_CLASSIC_UDB		0
-#define FREQOSC 					32000000
-#define CLK_PHASES					2
-#define CLOCK_CONFIG 				UDB4_CLOCK
+#define FREQOSC 			32000000
+#define CLK_PHASES			2
+#define CLOCK_CONFIG 			UDB4_CLOCK
 #endif
 
 
@@ -186,9 +186,9 @@ struct ADchannel {
 
 
 struct udb_flag_bits {
-			unsigned int unused					  	    : 6 ;
-			unsigned int a2d_read						: 1 ;
-			unsigned int radio_on						: 1 ;
+			unsigned int unused     : 6 ;
+			unsigned int a2d_read   : 1 ;
+			unsigned int radio_on	: 1 ;
 			} ;
 
 // Baud Rate Generator -- See section 19.3.1 of datasheet.

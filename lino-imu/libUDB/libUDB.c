@@ -61,8 +61,18 @@ _FGS(	GSS_OFF &          // User program memory is not code-protected
 _FPOR(	FPWRT_PWR1 ) ;   // 1=POR Timer disabled, otherwise 2-4-8-16-32-64-128ms
 _FICD(	JTAGEN_OFF &     // JTAG is Disabled
 		ICS_PGD2 ) ;         // Communicate on PGC2/EMUC2 and PGD2/EMUD2
+
+ //<GUIOTT>
+  /* CLOCK_FREQ = 8 MHz
+     FREQOSC = CLOCK_FREQ*M/(N1*N2) = 8M*32/(2*4)=32Mhz
+     CLK_PHASES		2
+     FCY = FREQOSC / CLK_PHASES = 16
+  */
+  #define FCY 16000
+  //</GUIOTT>
 #endif
 
+#include <libpic30.h>
 
 union udb_fbts_byte udb_flags ;
 
@@ -164,15 +174,6 @@ void udb_run(void)
 	// Never returns
 }
 
-//<GUIOTT>
-void delay(long d)
-{
-	for (; d>0; d--) {
-		Nop();
-	}
-}
-//</GUIOTT>
-
 void udb_init_leds( void )
 {
 	
@@ -181,25 +182,25 @@ void udb_init_leds( void )
 	
 #elif (BOARD_TYPE == UDB4_BOARD)
   int LedCnt;
-  unsigned int LedDelay=64000;
+  unsigned int LedDelay=50;
 	_TRISE1 = _TRISE2 = _TRISE3 = _TRISE4 = 0 ;
 	_LATE1 = _LATE2 = _LATE3 = _LATE4 = LED_OFF ;
   //<GUIOTT>
   for(LedCnt=0;LedCnt<4;LedCnt++)
   {
       LED_BLUE=LED_ON;
-      delay(LedDelay);
+      __delay_ms(LedDelay);
       LED_BLUE=LED_OFF;
       LED_ORANGE=LED_ON;
-      delay(LedDelay);
+      __delay_ms(LedDelay);
       LED_ORANGE=LED_OFF;
       LED_GREEN=LED_ON;
-      delay(LedDelay);
+      __delay_ms(LedDelay);
       LED_GREEN=LED_OFF;
       LED_RED=LED_ON;
-      delay(LedDelay);
+      __delay_ms(LedDelay);
       LED_RED=LED_OFF;
-      delay(LedDelay);
+      __delay_ms(LedDelay);
   }
   //</GUIOTT>
 #endif
