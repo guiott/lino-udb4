@@ -151,7 +151,7 @@ Otherwise, please remove the CLOCK_CONFIG line from your options.h file."
 // DEADRECKONING 0 selects the GPS to perform navigation, at the GPS update rate.
 // DEADRECKONING 1 selects the dead reckoning computations to perform navigation, at 40 Hz.
 #ifndef DEADRECKONING		// define only if not already defined in options.h
-#define DEADRECKONING		1
+#define DEADRECKONING		0
 #endif
 
 // Wind Estimation and Navigation

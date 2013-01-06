@@ -182,7 +182,7 @@ void udb_init_leds( void )
 	
 #elif (BOARD_TYPE == UDB4_BOARD)
   int LedCnt;
-  unsigned int LedDelay=50;
+  unsigned int LedDelay=20000;
 	_TRISE1 = _TRISE2 = _TRISE3 = _TRISE4 = 0 ;
 	_LATE1 = _LATE2 = _LATE3 = _LATE4 = LED_OFF ;
   //<GUIOTT>

@@ -5,6 +5,23 @@ Ben Levitt
 Peter Hollands
 Adam Barrow
 
-Porting for Lino 4WD rover:
-Guido Ottaviani
+<GUIOTT>
+
+copyright 2013 Guido Ottaviani
 guido@guiott.com
+
+This is my porting fron the original MatrixPilot software,
+starting from Version 3.3 R.1880 - Dec. 26th 2012
+
+I'm using the IMU to have a real time measurement of the current orientation
+for an outdoor 4WD rover: http://www.guiott.com/Lino/index.html
+to obtain an autonomous navigation like this one:
+http://www.seattlerobotics.org/encoder/200610/article3/IMU%20Odometry,%20by%20David%20Anderson.htm
+the using of the UDB4 is discussed her:http://www.guiott.com/Lino/IMU/IMU.htm
+it communicate with the basic motor control system for the 4 wheels:
+http://www.guiott.com/Lino/dsNav/dsNav.htm
+The high level navigation system (http://www.guiott.com/Lino/HLS/HLS.htm)
+controls the whole navigation, SLAM, obstacle avoidance and all the rest
+
+
+</GUIOTT>
