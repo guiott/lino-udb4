@@ -335,7 +335,12 @@
 // SERIAL_MAVLINK is only supported on the UDB4 to ensure that sufficient RAM is available.
 // Note that SERIAL_MAVLINK defaults to using a baud rate of 57600 baud (other formats default to 19200)
 
-#define SERIAL_OUTPUT_FORMAT     SERIAL_DEBUG // SERIAL_MAGNETOMETER //
+//<GUIOTT>
+// SERIAL_MAGNETOMETER to watch out the raw magnetometer data
+// SERIAL_CONSOLE to send information to GUIOTT ImuCOnsole Processing program
+//</GUIOTT>
+
+#define SERIAL_OUTPUT_FORMAT     SERIAL_CONSOLE
 
 // MAVLink requires an aircraft Identifier (I.D) as it is deaigned to control multiple aircraft
 // Each aircraft in the sky will need a unique I.D. in the range from 0-255

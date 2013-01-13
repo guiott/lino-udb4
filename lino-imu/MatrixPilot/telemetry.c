@@ -57,7 +57,10 @@ void (* sio_parse ) ( unsigned char inchar ) = &sio_newMsg ;
 
 
 #define SERIAL_BUFFER_SIZE 256
-char serial_buffer[SERIAL_BUFFER_SIZE] ;
+unsigned char serial_buffer[SERIAL_BUFFER_SIZE] ;
+//<GUIOTT>
+unsigned char Tmp_serial_buffer[SERIAL_BUFFER_SIZE] ;
+//</GUIOTT>
 int sb_index = 0 ;
 int end_index = 0 ;
 
@@ -71,8 +74,8 @@ void init_serial()
 	
 //  udb_serial_set_rate(19200) ;
 //	udb_serial_set_rate(38400) ;
-//	udb_serial_set_rate(57600) ;
-	udb_serial_set_rate(115200) ;
+ udb_serial_set_rate(57600) ;
+//	udb_serial_set_rate(115200) ;
 //	udb_serial_set_rate(230400) ;
 //	udb_serial_set_rate(460800) ;
 //	udb_serial_set_rate(921600) ; // yes, it really will work at this rate
@@ -337,12 +340,52 @@ void serial_output( char* format, ... )
 	return ;
 }
 
+//<GUIOTT>
+// add this binary data to the output buffer according to the GUIOTT protocol:
+// http://www.guiott.com/Rino/CommandDescr/Protocol.htm
+void serial_output_bin(int BuffLen)
+{
+	int start_index = end_index ;
+	int remaining = SERIAL_BUFFER_SIZE - start_index ;
+  int LenCnt;
+
+	if (remaining > 1)
+	{
+    for(LenCnt=0; LenCnt<BuffLen; LenCnt++)
+    {
+        serial_buffer[LenCnt+start_index] = Tmp_serial_buffer[LenCnt];
+    }
+    serial_buffer[LenCnt+start_index]=0; //null terminated
+		end_index = start_index + BuffLen;
+	}
+
+	if (sb_index == 0)
+	{
+		udb_serial_start_sending_data();
+	}
+
+	return ;
+}
+//</GUIOTT>
 
 int udb_serial_callback_get_byte_to_send(void)
 {
 	unsigned char txchar = serial_buffer[ sb_index++ ] ;
-	
+
+  /*<GUIOTT>
+   * modified to transmit binary buffer and not only ASCII (NULL terminated)
 	if ( txchar )
+	{
+		return txchar ;
+	}
+	else
+	{
+		sb_index = 0 ;
+		end_index = 0 ;
+	}
+  </GUIOTT>*/
+
+  if(sb_index <= end_index)
 	{
 		return txchar ;
 	}
@@ -395,6 +438,106 @@ void serial_output_8hz( void )
 
 	return ;
 }
+
+//<GUIOTT>
+#elif ( SERIAL_OUTPUT_FORMAT == SERIAL_CONSOLE )
+// String of important navigation data in the format of my communication protocol:
+// http://www.guiott.com/Rino/CommandDescr/Protocol.htm
+void serial_output_8hz( void )
+{
+    /*
+     The command string is composed by an array of unsigned char:
+     0      Header	 @
+     1      Id		   0	ASCII	(not used here, just for compatibility)
+     2      Cmd		   K 	ASCII
+     3      CmdLen	 Num of bytes (bin) following (checksum included)
+		 4-7    Plane gps latitude shown as the number of degrees times 10 to the power 7 North of the equator. (negative means south).
+		 8-11   Plane gps longitude shown as the number of degrees times 10 to the power 7 East of the Greenwich Meridian
+     12-15  Plane gps altitude in centimeters above mean sea level
+     16-17  Speed over the ground from the GPS in meters / second times 100
+     18-19  GPS Course over the Ground (2D) of the plane in degrees times 100
+     20-21  Week Number (GPS)
+     22-25  Time in micro seconds since Saturday midnight GMT (GPS)
+     26     hdop
+     27     number of visible satellites
+     28-29  DCM XpXe - rmat[0]
+     30-31  DCM XpYe - rmat[1]
+     32-33  DCM XpZe - rmat[2]
+     34-35  DCM YpXe - rmat[3]
+     36-37  DCM YpYe - rmat[4]
+     38-39  DCM YpZe - rmat[5]
+     40-41  DCM ZpXe - rmat[6]
+     42-43  DCM ZpYe - rmat[7]
+     44-45  DCM ZpZe - rmat[8]
+     46     Percentage of available cpu power that has been used over the last one second.
+     47     Checksum 0-255	obtained by adding in a 8 bit variable all the bytes composing the message (checksum itself excluded)
+     *
+     */
+    char ChkSum=0;
+    int ChkCnt;
+    int H = 4; // Head length, number of characters in buffer before valid data
+
+    int LastIndx = 46; //change this value only according to the buffer length
+
+    int Ndata=LastIndx-H+1;//number of valid data=last index-head length+1 (chk)
+
+    Tmp_serial_buffer[0]='@';
+    Tmp_serial_buffer[1]='0';
+    Tmp_serial_buffer[2]='K';
+    Tmp_serial_buffer[3]= Ndata;
+    Tmp_serial_buffer[4]=lat_gps.__.B3; // MSB first
+    Tmp_serial_buffer[5]=lat_gps.__.B2;
+    Tmp_serial_buffer[6]=lat_gps.__.B1;
+    Tmp_serial_buffer[7]=lat_gps.__.B0;
+    Tmp_serial_buffer[8]=long_gps.__.B3; // MSB first
+    Tmp_serial_buffer[9]=long_gps.__.B2;
+    Tmp_serial_buffer[10]=long_gps.__.B1;
+    Tmp_serial_buffer[11]=long_gps.__.B0;
+    Tmp_serial_buffer[12]=alt_sl_gps.__.B3; // MSB first
+    Tmp_serial_buffer[13]=alt_sl_gps.__.B2;
+    Tmp_serial_buffer[14]=alt_sl_gps.__.B1;
+    Tmp_serial_buffer[15]=alt_sl_gps.__.B0;
+    Tmp_serial_buffer[16]=sog_gps._.B1;
+    Tmp_serial_buffer[17]=sog_gps._.B0;
+    Tmp_serial_buffer[18]=cog_gps._.B1;
+    Tmp_serial_buffer[19]=cog_gps._.B0;
+    Tmp_serial_buffer[20]=week_no._.B1;
+    Tmp_serial_buffer[21]=week_no._.B0;
+    Tmp_serial_buffer[22]=tow.__.B3; // MSB first
+    Tmp_serial_buffer[23]=tow.__.B2;
+    Tmp_serial_buffer[24]=tow.__.B1;
+    Tmp_serial_buffer[25]=tow.__.B0;
+    Tmp_serial_buffer[26]=hdop;
+    Tmp_serial_buffer[27]=svs;
+    Tmp_serial_buffer[28]=rmat[0] >> 8;
+    Tmp_serial_buffer[29]=rmat[0];
+    Tmp_serial_buffer[30]=rmat[1] >> 8;
+    Tmp_serial_buffer[31]=rmat[1];
+    Tmp_serial_buffer[32]=rmat[2] >> 8;
+    Tmp_serial_buffer[33]=rmat[2];
+    Tmp_serial_buffer[34]=rmat[3] >> 8;
+    Tmp_serial_buffer[35]=rmat[3];
+    Tmp_serial_buffer[36]=rmat[4] >> 8;
+    Tmp_serial_buffer[37]=rmat[4];
+    Tmp_serial_buffer[38]=rmat[5] >> 8;
+    Tmp_serial_buffer[39]=rmat[5];
+    Tmp_serial_buffer[40]=rmat[6] >> 8;
+    Tmp_serial_buffer[41]=rmat[6];
+    Tmp_serial_buffer[42]=rmat[7] >> 8;
+    Tmp_serial_buffer[43]=rmat[7];
+    Tmp_serial_buffer[44]=rmat[8] >> 8;
+    Tmp_serial_buffer[45]=rmat[8];
+    Tmp_serial_buffer[46]=udb_cpu_load();
+
+    for(ChkCnt=0; ChkCnt<=LastIndx; ChkCnt++)
+    {
+        ChkSum+=Tmp_serial_buffer[ChkCnt];
+    }
+    Tmp_serial_buffer[LastIndx+1]=ChkSum;
+    serial_output_bin(LastIndx+2);
+	return ;
+}
+//</GUIOTT>
 
 
 #elif ( SERIAL_OUTPUT_FORMAT == SERIAL_ARDUSTATION )

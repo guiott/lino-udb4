@@ -51,16 +51,16 @@ _FICD( 0xC003 ) ;					// normal use of debugging port
 #elif (BOARD_TYPE == UDB4_BOARD)
 _FOSCSEL(FNOSC_PRIPLL) ; // Primary Oscillator (XT, HS, EC) w/ PLL medium speed XTAL plus PLL
 _FOSC(	FCKSM_CSECMD &   // Clock switching is enabled, Fail-Safe Clock Monitor is disabled
-		OSCIOFNC_ON &        // OSC2 pin has digital I/O function
-		POSCMD_XT ) ;        // Primary Oscillator Disabled
+		OSCIOFNC_OFF &   // OSC2 pin has no digital I/O function
+		POSCMD_XT ) ;    // XT Oscillator Mode
 _FWDT(	FWDTEN_OFF &     // Watchdog timer enabled/disabled by user software
-		WINDIS_OFF ) ;       // Watchdog Timer in Non-Window mode
-_FGS(	GSS_OFF &          // User program memory is not code-protected
-		GCP_OFF &            // User program memory is not code-protected
-		GWRP_OFF ) ;         // User program memory is not write-protected
+		WINDIS_OFF ) ;   // Watchdog Timer in Non-Window mode
+_FGS(	GSS_OFF &        // User program memory is not code-protected
+		GCP_OFF &        // User program memory is not code-protected
+		GWRP_OFF ) ;     // User program memory is not write-protected
 _FPOR(	FPWRT_PWR1 ) ;   // 1=POR Timer disabled, otherwise 2-4-8-16-32-64-128ms
 _FICD(	JTAGEN_OFF &     // JTAG is Disabled
-		ICS_PGD2 ) ;         // Communicate on PGC2/EMUC2 and PGD2/EMUD2
+		ICS_PGD2 ) ;     // Communicate on PGC2/EMUC2 and PGD2/EMUD2
 
  //<GUIOTT>
   /* CLOCK_FREQ = 8 MHz
