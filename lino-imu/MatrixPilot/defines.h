@@ -24,6 +24,7 @@
 
 
 #define BYTECIR_TO_DEGREE 92160		// (360.0/256 * 2^16)
+#define BYTECIRINT_TO_DEGREE_X_10 3600  // (360.0/65536 * 2^16 * 10 -> 0-3600)
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -220,8 +221,9 @@ void mavlink_output_40hz( void ) ;
 #define SERIAL_UDB_EXTRA	7	// Extra Telemetry beyond that provided by SERIAL_UDB for higher bandwidth connections
 #define SERIAL_CAM_TRACK	8	// Output Location in a format usable by a 2nd UDB to target its camera at this plane
 #define SERIAL_MAVLINK		9	// The Micro Air Vehicle Link protocol from the PixHawk Project
+#define SERIAL_CONSOLE         10       // to send information to GUIOTT ImuConsole Processing program
 
-
+#define SERIAL_IN_GUIOTT        1       // to receive information with GUIOTT protocoll
 ////////////////////////////////////////////////////////////////////////////////
 // cameraCntrl.c
 void set_camera_view( struct relative3D current_view ) ;

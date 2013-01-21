@@ -695,7 +695,7 @@ void mag_drift()
 		VectorCross( magAlignmentError, magFieldEarthNormalizedPrevious , magFieldEarthNormalized ) ;
 
 //		Compute R2 transpose
-    MatrixTranspose( 3 , 3 , rmat2Transpose , rmatDelayCompensated ) ;//GUIOTT This is the line that cause the address error
+    MatrixTranspose( 3 , 3 , rmat2Transpose , rmatDelayCompensated ) ;
     
 //		Compute 1/2 of R2tranpose times R1
 		MatrixMultiply( 3 , 3 , 3 , rmatBufferA , rmat2Transpose , rmatPrevious ) ;

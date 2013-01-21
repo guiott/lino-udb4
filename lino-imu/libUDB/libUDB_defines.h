@@ -141,7 +141,7 @@ Otherwise, please remove the CLOCK_CONFIG line from your options.h file."
 
 #else
 #define BOARD_IS_CLASSIC_UDB		0
-#define FREQOSC 			32000000
+#define FREQOSC 			80000000
 #define CLK_PHASES			2
 #define CLOCK_CONFIG 			UDB4_CLOCK
 #endif

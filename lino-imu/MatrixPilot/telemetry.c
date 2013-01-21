@@ -50,17 +50,60 @@ void sio_fp_checksum( unsigned char inchar ) ;
 void sio_cam_data( unsigned char inchar ) ;
 void sio_cam_checksum( unsigned char inchar ) ;
 
+//<GUIOTT>
+// following functions decode and control packet parameters
+#define HEADER  '@'
+#define HEADER_LEN 4//# of bytes composing the header, payload starts from pos.4
+void GO_sio_header ( unsigned char inchar );
+void GO_sio_id ( unsigned char inchar );
+void GO_sio_command ( unsigned char inchar );
+void GO_sio_lenght ( unsigned char inchar );
+void GO_sio_data ( unsigned char inchar );
+void GO_UartRxError(int Err);
+void GO_cmd_parser(int Cmd); // only if above are correct, start the command parsing
+unsigned char GO_CheckSum(unsigned char* Buffer, int LastIndx);
+void GO_serial_output_nav_data_K (void); // exec command K: send nav params
+void GO_serial_input_nav_data_S(void);   // cmd S: set speed & direction
+void GO_I2C_output_yaw(void); // compute and send yaw value to motor controller
+//</GUIOTT>
+
+
 char fp_high_byte;
 unsigned char fp_checksum;
 
+#if (SERIAL_INPUT_FORMAT  ==    SERIAL_IN_GUIOTT)
+void (* sio_parse ) ( unsigned char inchar ) = &GO_sio_header ;
+#else
 void (* sio_parse ) ( unsigned char inchar ) = &sio_newMsg ;
+#endif
 
 
 #define SERIAL_BUFFER_SIZE 256
 unsigned char serial_buffer[SERIAL_BUFFER_SIZE] ;
+
 //<GUIOTT>
 unsigned char Tmp_serial_buffer[SERIAL_BUFFER_SIZE] ;
+unsigned char RX_serial_buffer[SERIAL_BUFFER_SIZE] ;
+int RxBuffindx; // buffer pointer
+int RxBuffCnt;  // buffer counter
+#define I2C_BUFF_SIZE_TX 6
+
+// TX Buffer
+struct _TxBuff
+{
+    int VelDes; // mean desired speed mm/s [23]
+    int YawDes; // desired orientation angle (set point)(Degx10 0-3599)
+    int YawMes; // measured orientation binary angle (process control) (0 : 65535 = 360 degrees)
+};
+
+union __TxBuff
+{
+    struct _TxBuff I;// to use as integers or chars, little endian LSB first
+    char C[I2C_BUFF_SIZE_TX];  // to use as bytes to send on I2C buffer
+}I2CTxBuff;
 //</GUIOTT>
+
+
 int sb_index = 0 ;
 int end_index = 0 ;
 
@@ -94,6 +137,118 @@ void udb_serial_callback_received_byte(char rxchar)
 	(* sio_parse) ( rxchar ) ; // parse the input byte
 	return ;
 }
+
+//<GUIOTT>
+void GO_sio_header ( unsigned char inchar )
+{
+  if ( inchar == HEADER )
+  {
+	sio_parse = &GO_sio_id ;
+    RxBuffindx = 0;     // reset buffer
+    RX_serial_buffer[RxBuffindx] = inchar;
+  }
+  else // out of command sequence -> error
+  {
+    GO_UartRxError(-5);
+  }
+  return ;
+}
+
+void GO_sio_id ( unsigned char inchar )
+{
+  if ( 1 ) // ID is not used in this case
+  {
+    sio_parse = &GO_sio_command ;
+    RxBuffindx ++;     // next location in buffer
+    RX_serial_buffer[RxBuffindx] = inchar;
+  }
+  else // receive but does not decode the command
+  {
+    // if ID is used set here a flag to avoid executing command
+  }
+  return ;
+}
+
+void GO_sio_command ( unsigned char inchar )
+{
+	sio_parse = &GO_sio_lenght ;
+    RxBuffindx ++;     // next location in buffer
+    RX_serial_buffer[RxBuffindx] = inchar;
+    return ;
+}
+
+void GO_sio_lenght ( unsigned char inchar )
+{
+	sio_parse = &GO_sio_data ;
+    RxBuffindx ++;     // next location in buffer
+    RX_serial_buffer[RxBuffindx] = inchar;
+    RxBuffCnt = inchar;
+    return ;
+}
+
+void GO_sio_data ( unsigned char inchar )
+{
+    RxBuffindx ++;     // next location in buffer
+    RX_serial_buffer[RxBuffindx] = inchar;
+    RxBuffCnt --;   // receive the right number of characters: the payload
+    if (RxBuffCnt ==0)
+    {
+        sio_parse = &GO_sio_header; // restart packet decoding procedure
+        
+        if (GO_CheckSum(RX_serial_buffer, RxBuffindx-1) == inchar )
+        {
+            GO_cmd_parser(RX_serial_buffer[2]); // command is at position 2
+        }
+        else
+        {
+            GO_UartRxError(-1); // checksum error
+        }  
+    }
+    return ;
+}
+
+void GO_cmd_parser(int Cmd)
+{
+    switch (Cmd)
+    {
+        case 'K':
+            GO_serial_output_nav_data_K();
+            break;
+
+        case 'S':
+            GO_serial_input_nav_data_S();
+            break;
+
+        default:
+            GO_UartRxError(-1); //	error: not a known command
+            break;
+    }
+}
+
+void GO_UartRxError(int Err)
+{
+    // do error procedures
+    return;
+}
+
+unsigned char GO_CheckSum(unsigned char* Buffer, int LastIndx)
+{
+   unsigned char ChkSum = 0;
+   int ChkCnt;
+
+    for(ChkCnt=0; ChkCnt<=LastIndx; ChkCnt++)
+    {
+        ChkSum+=Buffer[ChkCnt];
+    }
+   	return ChkSum;
+ }
+
+void GO_serial_input_nav_data_S(void)
+{// two byte int MSB
+    I2CTxBuff.I.VelDes = (RX_serial_buffer[HEADER_LEN] << 8) + (RX_serial_buffer[HEADER_LEN +1]);
+    I2CTxBuff.I.YawDes = (RX_serial_buffer[HEADER_LEN+2] << 8) + (RX_serial_buffer[HEADER_LEN +3]);
+}
+//</GUIOTT>
 
 
 void sio_newMsg( unsigned char inchar )
@@ -341,9 +496,99 @@ void serial_output( char* format, ... )
 }
 
 //<GUIOTT>
-// add this binary data to the output buffer according to the GUIOTT protocol:
-// http://www.guiott.com/Rino/CommandDescr/Protocol.htm
-void serial_output_bin(int BuffLen)
+void GO_serial_output_nav_data_K( void )
+{
+    /*
+     The command string is composed by an array of unsigned char:
+     0      Header	 @
+     1      Id		   0	ASCII	(not used here, just for compatibility)
+     2      Cmd		   K 	ASCII
+     3      CmdLen	 Num of bytes (bin) following (checksum included)
+		 4-7    Plane gps latitude shown as the number of degrees times 10 to the power 7 North of the equator. (negative means south).
+		 8-11   Plane gps longitude shown as the number of degrees times 10 to the power 7 East of the Greenwich Meridian
+     12-15  Plane gps altitude in centimeters above mean sea level
+     16-17  Speed over the ground from the GPS in meters / second times 100
+     18-19  GPS Course over the Ground (2D) of the plane in degrees times 100
+     20-21  Week Number (GPS)
+     22-25  Time in micro seconds since Saturday midnight GMT (GPS)
+     26     hdop
+     27     number of visible satellites
+     28-29  DCM XpXe - rmat[0]
+     30-31  DCM XpYe - rmat[1]
+     32-33  DCM XpZe - rmat[2]
+     34-35  DCM YpXe - rmat[3]
+     36-37  DCM YpYe - rmat[4]
+     38-39  DCM YpZe - rmat[5]
+     40-41  DCM ZpXe - rmat[6]
+     42-43  DCM ZpYe - rmat[7]
+     44-45  DCM ZpZe - rmat[8]
+     46     Percentage of available cpu power that has been used over the last one second.
+     47     Checksum 0-255	obtained by adding in a 8 bit variable all the bytes composing the message (checksum itself excluded)
+     *
+     */
+ 
+    int H = 4; // Head length, number of characters in buffer before valid data
+
+    int LastIndx = 46; //change this value only according to the buffer length
+
+    int Ndata=LastIndx-H+1;//number of valid data=last index-head length+1 (chk)
+
+    Tmp_serial_buffer[0]= HEADER;
+    Tmp_serial_buffer[1]='0';
+    Tmp_serial_buffer[2]='K';
+    Tmp_serial_buffer[3]= Ndata;
+    Tmp_serial_buffer[4]=lat_gps.__.B3; // MSB first
+    Tmp_serial_buffer[5]=lat_gps.__.B2;
+    Tmp_serial_buffer[6]=lat_gps.__.B1;
+    Tmp_serial_buffer[7]=lat_gps.__.B0;
+    Tmp_serial_buffer[8]=long_gps.__.B3; // MSB first
+    Tmp_serial_buffer[9]=long_gps.__.B2;
+    Tmp_serial_buffer[10]=long_gps.__.B1;
+    Tmp_serial_buffer[11]=long_gps.__.B0;
+    Tmp_serial_buffer[12]=alt_sl_gps.__.B3; // MSB first
+    Tmp_serial_buffer[13]=alt_sl_gps.__.B2;
+    Tmp_serial_buffer[14]=alt_sl_gps.__.B1;
+    Tmp_serial_buffer[15]=alt_sl_gps.__.B0;
+    Tmp_serial_buffer[16]=sog_gps._.B1;
+    Tmp_serial_buffer[17]=sog_gps._.B0;
+    Tmp_serial_buffer[18]=cog_gps._.B1;
+    Tmp_serial_buffer[19]=cog_gps._.B0;
+    Tmp_serial_buffer[20]=week_no._.B1;
+    Tmp_serial_buffer[21]=week_no._.B0;
+    Tmp_serial_buffer[22]=tow.__.B3; // MSB first
+    Tmp_serial_buffer[23]=tow.__.B2;
+    Tmp_serial_buffer[24]=tow.__.B1;
+    Tmp_serial_buffer[25]=tow.__.B0;
+    Tmp_serial_buffer[26]=hdop;
+    Tmp_serial_buffer[27]=svs;
+    Tmp_serial_buffer[28]=rmat[0] >> 8;
+    Tmp_serial_buffer[29]=rmat[0];
+    Tmp_serial_buffer[30]=rmat[1] >> 8;
+    Tmp_serial_buffer[31]=rmat[1];
+    Tmp_serial_buffer[32]=rmat[2] >> 8;
+    Tmp_serial_buffer[33]=rmat[2];
+    Tmp_serial_buffer[34]=rmat[3] >> 8;
+    Tmp_serial_buffer[35]=rmat[3];
+    Tmp_serial_buffer[36]=rmat[4] >> 8;
+    Tmp_serial_buffer[37]=rmat[4];
+    Tmp_serial_buffer[38]=rmat[5] >> 8;
+    Tmp_serial_buffer[39]=rmat[5];
+    Tmp_serial_buffer[40]=rmat[6] >> 8;
+    Tmp_serial_buffer[41]=rmat[6];
+    Tmp_serial_buffer[42]=rmat[7] >> 8;
+    Tmp_serial_buffer[43]=rmat[7];
+    Tmp_serial_buffer[44]=rmat[8] >> 8;
+    Tmp_serial_buffer[45]=rmat[8];
+    Tmp_serial_buffer[46]=udb_cpu_load();
+
+ 
+    Tmp_serial_buffer[LastIndx+1]=GO_CheckSum(Tmp_serial_buffer, LastIndx);
+    GO_serial_output_bin(LastIndx+2);
+	return ;
+}
+
+// add this binary data to the output buffer according to the GUIOTT protocol
+void GO_serial_output_bin(int BuffLen)
 {
 	int start_index = end_index ;
 	int remaining = SERIAL_BUFFER_SIZE - start_index ;
@@ -365,6 +610,16 @@ void serial_output_bin(int BuffLen)
 	}
 
 	return ;
+}
+
+void GO_I2C_output_yaw(void)
+{// called every 25ms from T6 timer callback
+    struct relative2D matrix_accum ;
+
+    matrix_accum.x = rmat[4];
+    matrix_accum.y = rmat[1];
+    I2CTxBuff.I.YawMes = rect_to_polar16(&matrix_accum); // binary angle (0 : 65535 = 360 degrees)
+   // trasmettere I2C yaw????????????????????debug da fare
 }
 //</GUIOTT>
 
@@ -445,96 +700,7 @@ void serial_output_8hz( void )
 // http://www.guiott.com/Rino/CommandDescr/Protocol.htm
 void serial_output_8hz( void )
 {
-    /*
-     The command string is composed by an array of unsigned char:
-     0      Header	 @
-     1      Id		   0	ASCII	(not used here, just for compatibility)
-     2      Cmd		   K 	ASCII
-     3      CmdLen	 Num of bytes (bin) following (checksum included)
-		 4-7    Plane gps latitude shown as the number of degrees times 10 to the power 7 North of the equator. (negative means south).
-		 8-11   Plane gps longitude shown as the number of degrees times 10 to the power 7 East of the Greenwich Meridian
-     12-15  Plane gps altitude in centimeters above mean sea level
-     16-17  Speed over the ground from the GPS in meters / second times 100
-     18-19  GPS Course over the Ground (2D) of the plane in degrees times 100
-     20-21  Week Number (GPS)
-     22-25  Time in micro seconds since Saturday midnight GMT (GPS)
-     26     hdop
-     27     number of visible satellites
-     28-29  DCM XpXe - rmat[0]
-     30-31  DCM XpYe - rmat[1]
-     32-33  DCM XpZe - rmat[2]
-     34-35  DCM YpXe - rmat[3]
-     36-37  DCM YpYe - rmat[4]
-     38-39  DCM YpZe - rmat[5]
-     40-41  DCM ZpXe - rmat[6]
-     42-43  DCM ZpYe - rmat[7]
-     44-45  DCM ZpZe - rmat[8]
-     46     Percentage of available cpu power that has been used over the last one second.
-     47     Checksum 0-255	obtained by adding in a 8 bit variable all the bytes composing the message (checksum itself excluded)
-     *
-     */
-    char ChkSum=0;
-    int ChkCnt;
-    int H = 4; // Head length, number of characters in buffer before valid data
-
-    int LastIndx = 46; //change this value only according to the buffer length
-
-    int Ndata=LastIndx-H+1;//number of valid data=last index-head length+1 (chk)
-
-    Tmp_serial_buffer[0]='@';
-    Tmp_serial_buffer[1]='0';
-    Tmp_serial_buffer[2]='K';
-    Tmp_serial_buffer[3]= Ndata;
-    Tmp_serial_buffer[4]=lat_gps.__.B3; // MSB first
-    Tmp_serial_buffer[5]=lat_gps.__.B2;
-    Tmp_serial_buffer[6]=lat_gps.__.B1;
-    Tmp_serial_buffer[7]=lat_gps.__.B0;
-    Tmp_serial_buffer[8]=long_gps.__.B3; // MSB first
-    Tmp_serial_buffer[9]=long_gps.__.B2;
-    Tmp_serial_buffer[10]=long_gps.__.B1;
-    Tmp_serial_buffer[11]=long_gps.__.B0;
-    Tmp_serial_buffer[12]=alt_sl_gps.__.B3; // MSB first
-    Tmp_serial_buffer[13]=alt_sl_gps.__.B2;
-    Tmp_serial_buffer[14]=alt_sl_gps.__.B1;
-    Tmp_serial_buffer[15]=alt_sl_gps.__.B0;
-    Tmp_serial_buffer[16]=sog_gps._.B1;
-    Tmp_serial_buffer[17]=sog_gps._.B0;
-    Tmp_serial_buffer[18]=cog_gps._.B1;
-    Tmp_serial_buffer[19]=cog_gps._.B0;
-    Tmp_serial_buffer[20]=week_no._.B1;
-    Tmp_serial_buffer[21]=week_no._.B0;
-    Tmp_serial_buffer[22]=tow.__.B3; // MSB first
-    Tmp_serial_buffer[23]=tow.__.B2;
-    Tmp_serial_buffer[24]=tow.__.B1;
-    Tmp_serial_buffer[25]=tow.__.B0;
-    Tmp_serial_buffer[26]=hdop;
-    Tmp_serial_buffer[27]=svs;
-    Tmp_serial_buffer[28]=rmat[0] >> 8;
-    Tmp_serial_buffer[29]=rmat[0];
-    Tmp_serial_buffer[30]=rmat[1] >> 8;
-    Tmp_serial_buffer[31]=rmat[1];
-    Tmp_serial_buffer[32]=rmat[2] >> 8;
-    Tmp_serial_buffer[33]=rmat[2];
-    Tmp_serial_buffer[34]=rmat[3] >> 8;
-    Tmp_serial_buffer[35]=rmat[3];
-    Tmp_serial_buffer[36]=rmat[4] >> 8;
-    Tmp_serial_buffer[37]=rmat[4];
-    Tmp_serial_buffer[38]=rmat[5] >> 8;
-    Tmp_serial_buffer[39]=rmat[5];
-    Tmp_serial_buffer[40]=rmat[6] >> 8;
-    Tmp_serial_buffer[41]=rmat[6];
-    Tmp_serial_buffer[42]=rmat[7] >> 8;
-    Tmp_serial_buffer[43]=rmat[7];
-    Tmp_serial_buffer[44]=rmat[8] >> 8;
-    Tmp_serial_buffer[45]=rmat[8];
-    Tmp_serial_buffer[46]=udb_cpu_load();
-
-    for(ChkCnt=0; ChkCnt<=LastIndx; ChkCnt++)
-    {
-        ChkSum+=Tmp_serial_buffer[ChkCnt];
-    }
-    Tmp_serial_buffer[LastIndx+1]=ChkSum;
-    serial_output_bin(LastIndx+2);
+    GO_serial_output_nav_data_K;
 	return ;
 }
 //</GUIOTT>

@@ -233,6 +233,19 @@ int udb_serial_callback_get_byte_to_send(void);		// Callback
 // Implement this callback to handle receiving a byte from the serial port
 void udb_serial_callback_received_byte(char rxchar);	// Callback
 
+////////////////////////////////////////////////////////////////////////////////
+// <GUIOTT>
+// String of important navigation data in the format of GUIOTT communication protocol:
+// http://www.guiott.com/Rino/CommandDescr/Protocol.htm
+// command K
+void GO_serial_output_nav_data_K( void );
+// Checksum computation
+unsigned char GO_CheckSum(unsigned char * Buffer, int LastIndx);
+// add this binary data to the output buffer
+void GO_serial_output_bin(int BuffLen);
+//</GUIOTT>
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // On Screen Display

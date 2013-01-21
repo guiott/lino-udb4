@@ -20,6 +20,7 @@
 
 
 #include "libUDB_internal.h"
+#include "I2C.h"
 
 #if (BOARD_IS_CLASSIC_UDB)
 #if ( CLOCK_CONFIG == CRYSTAL_CLOCK )
@@ -58,7 +59,7 @@ _FWDT(	FWDTEN_OFF &     // Watchdog timer enabled/disabled by user software
 _FGS(	GSS_OFF &        // User program memory is not code-protected
 		GCP_OFF &        // User program memory is not code-protected
 		GWRP_OFF ) ;     // User program memory is not write-protected
-_FPOR(	FPWRT_PWR1 ) ;   // 1=POR Timer disabled, otherwise 2-4-8-16-32-64-128ms
+_FPOR(	FPWRT_PWR128 ) ; // 1=POR Timer disabled, otherwise 2-4-8-16-32-64-128ms
 _FICD(	JTAGEN_OFF &     // JTAG is Disabled
 		ICS_PGD2 ) ;     // Communicate on PGC2/EMUC2 and PGD2/EMUD2
 
@@ -68,7 +69,8 @@ _FICD(	JTAGEN_OFF &     // JTAG is Disabled
      CLK_PHASES		2
      FCY = FREQOSC / CLK_PHASES = 16
   */
-  #define FCY 16000
+  #define FCY FREQOSC / CLK_PHASES
+
   //</GUIOTT>
 #endif
 
@@ -145,8 +147,14 @@ void udb_init(void)
 	udb_init_clock() ;
 	udb_init_capture() ;
 	
-#if (MAG_YAW_DRIFT == 1)
-	udb_init_I2C() ;
+#if (MAG_YAW_DRIFT == 1  ||  USE_BAROMETER == 1)
+        #if (USE_I2C1_DRIVER == 1)
+                I2C1_init();
+        #endif
+        #if (USE_I2C2_DRIVER == 1)
+                I2C2_init(); //  NEW I2C QUEUE FUNCTION FOR MULTIPLE SENSOR SUPPORT
+        #endif
+        //  I2C1_init() ;
 #endif
 	
 	udb_init_GPS() ;

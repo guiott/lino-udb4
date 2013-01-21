@@ -30,6 +30,9 @@ int pitch_control, roll_control, yaw_control, throttle_control ;
 
 void manualPassthrough( void ) ;
 
+//<GUIOTT>
+void GO_I2C_output_yaw(void); // compute and send yaw value to motor controller
+//</GUIOTT>
 
 void init_servoPrepare( void )	// initialize the PWM
 {
@@ -107,10 +110,18 @@ void dcm_servo_callback_prepare_outputs(void)
 		}
 #endif
 	}
-	
+
+//<GUIOTT>
+#if ( SERIAL_INPUT_FORMAT ==  SERIAL_IN_GUIOTT )
+    GO_I2C_output_yaw();
+#endif
+//</GUIOTT>
+
 #if (USE_OSD == 1)
 	osd_run_step() ;
 #endif
+
+
 	
 	return ;
 }

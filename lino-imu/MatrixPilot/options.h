@@ -337,10 +337,16 @@
 
 //<GUIOTT>
 // SERIAL_MAGNETOMETER to watch out the raw magnetometer data
-// SERIAL_CONSOLE to send information to GUIOTT ImuCOnsole Processing program
+// SERIAL_CONSOLE to autonomously send information at 8Hz to GUIOTT ImuCOnsole Processing program
+// SERIAL_INPUT_FORMAT  GUIOTT receive data on serial port in the format of GUIOTT communication protocol:
+// http://www.guiott.com/Rino/CommandDescr/Protocol.htm
+// 
+#define SERIAL_INPUT_FORMAT      SERIAL_IN_GUIOTT
+#define DSNAV_I2C      0            // enable I2C communication with dsNav
 //</GUIOTT>
 
-#define SERIAL_OUTPUT_FORMAT     SERIAL_CONSOLE
+
+#define SERIAL_OUTPUT_FORMAT     SERIAL_NONE
 
 // MAVLink requires an aircraft Identifier (I.D) as it is deaigned to control multiple aircraft
 // Each aircraft in the sky will need a unique I.D. in the range from 0-255
