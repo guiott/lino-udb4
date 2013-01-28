@@ -23,13 +23,6 @@
 
 #if (BOARD_TYPE == UDB4_BOARD)
 
-//	Analog to digital processing.
-//	Sampling and conversion is done automatically, so that all that needs to be done during 
-//	interrupt processing is to read the data out of the buffer.
-//	Raw samples are taken approximately 500 per second per channel.
-//	A first order digital lowpass filter with a time constant of about 32 milliseconds 
-//  is applied to improve signal to noise.
-
 //	Variables.
 
 struct ADchannel udb_xaccel, udb_yaccel , udb_zaccel ; // x, y, and z accelerometer channels
@@ -40,14 +33,6 @@ struct ADchannel udb_vref ; // reference voltage
 struct ADchannel udb_analogInputs[NUM_ANALOG_INPUTS] ; // 0-indexed, unlike servo pwIn/Out/Trim arrays
 #endif
 
-
-// Number of locations for ADC buffer = 10 (AN1,4,6,9,10,11,15,16,17,18) x 1 = 10 words
-// Align the buffer to 10 words or 20 bytes. This is needed for peripheral indirect mode
-#define NUM_AD_CHAN 10
-int  BufferA[NUM_AD_CHAN] __attribute__((space(dma),aligned(32))) ;
-int  BufferB[NUM_AD_CHAN] __attribute__((space(dma),aligned(32))) ;
-
-
 int vref_adj ;
 int sample_count ;
 
@@ -55,8 +40,68 @@ int sample_count ;
 unsigned int maxstack = 0 ;
 #endif
 
+/*<GUIOTT>
+ * Analog to digital processing.
+ * Sampling and conversion is done automatically, all channels are read by the
+ * DMA before generating the interrupt.
+ * At the end of a full acquisition cycle, the single readings are summated in a
+ * variable and averaged after ALMOST_ENOUGH_SAMPLES cycles. This correspond to
+ * a first order digital lowpass filter with a time constant of about
+ * 23 milliseconds, applied to improve signal to noise.
+ * With an hearthbeat of 40Hz (25ms) this guarantee at least one new set of
+ * values for each DCM computation.
+ *
+ * Below constants to make the ADC configuration parametrizable following
+ * Mark Whitehorn branch for 40Mips clock
+ *
+ * dsPIC33FJXXXGPX06A/X08A/X10A
+ * minimum allowed 12-bit ADC clock period is 118ns or 8.47MHz
+ * TAD is 1/ADC_CLK
+ * 12 bit mode conversion time is 14 Tad cycles
+ * total sample/conversion time is (14+SAMC) * Tad
+ * for automatic sequential sampling and conversion, the sampling time is
+ *   SAMC * Tad
+ * 
+ * With:
+ * FREQOSC = 80MHz
+ * CLK_PHASES = 2
+ * ADCLK_DIV_N_MINUS_1 = 63 (ADCS)
+ * ADSAMP_TIME_N = 10 (SAMC)
+ * NUM_ANALOG_INPUTS = 0
+ * NUM_AD_CHAN = NUM_ANALOG_INPUTS + 6 (only 3 axys accel. + 3 axys gyro)
 
-#define ALMOST_ENOUGH_SAMPLES 216 // there are 222 or 223 samples in a sum
+ * Fcy = FREQOSC / CLK_PHASES = 40MHz
+ * Tcy = 1 / Fcy = 25ns
+ * ADC_CLK = Fcy / (ADCLK_DIV_N_MINUS_1 + 1) = 625kHz
+ * Tad = 1 / ADC_CLK = 1.6us
+ * ADC Conversion Time for 12-bit Tconv = 14*Tad = 22.4us
+ * ADC Total sample/conversion time = (14 + ADSAMP_TIME_N) * 1.6us = 38.4us
+ * ADC_RATE = 1 / (Total sample/conversion time) = 26kHz
+ * Cycle time = (Total sample/conversion time) * NUM_AD_CHAN = 230.4us
+ * DMA interrupt rate = 1 / Cycle time = 4.3kHz
+ * Average time=Cycle time*ALMOST_ENOUGH_SAMPLES=23ms = PB filter time constant
+*/
+
+// Number of possible locations for ADC buffer 10
+// (AN1,4,6,9,10,11,15,16,17,18) x 1 = 10 words
+// Align the buffer to 10 words or 20 bytes. This is needed for peripheral indirect mode
+// 3 analog inputs for accell + 3 for gyro
+#define NUM_AD_CHAN (NUM_ANALOG_INPUTS + 6)
+int  BufferA[NUM_AD_CHAN] __attribute__((space(dma),aligned(32))) ;
+int  BufferB[NUM_AD_CHAN] __attribute__((space(dma),aligned(32))) ;
+
+#define ADCLK_DIV_N_MINUS_1 63  // ADCS max divisor is 64
+#define ADC_CLK (FREQOSC / (CLK_PHASES * (ADCLK_DIV_N_MINUS_1 + 1)))
+#if (ADC_CLK > 8470000)
+#error ADC_CLK too fast
+#endif
+
+#define ADSAMP_TIME_N 10
+
+#define ADC_RATE (1.0 * ADC_CLK / (ADSAMP_TIME_N + 14))
+
+#define ALMOST_ENOUGH_SAMPLES 100
+//</GUIOTT>
 
 
 void udb_init_gyros( void )
@@ -98,14 +143,13 @@ void udb_init_ADC( void )
 	AD1CON2bits.CHPS  = 0 ;		// Converts CH0
 	
 	AD1CON3bits.ADRC = 0 ;		// ADC Clock is derived from Systems Clock
-	AD1CON3bits.ADCS = 11 ;		// ADC Conversion Clock Tad=Tcy*(ADCS+1)= (1/40M)*12 = 0.3us (3333.3Khz)
-								// ADC Conversion Time for 12-bit Tc=14*Tad = 4.2us
-	AD1CON3bits.SAMC = 1 ;		// No waiting between samples
+	AD1CON3bits.ADCS = ADCLK_DIV_N_MINUS_1;
+	AD1CON3bits.SAMC = ADSAMP_TIME_N  ;
 	
 	AD1CON2bits.VCFG = 0 ;		// use supply as reference voltage
 	
 	AD1CON1bits.ADDMABM = 1 ; 	// DMA buffers are built in sequential mode
-	AD1CON2bits.SMPI    = (NUM_AD_CHAN-1) ;	// 4 ADC Channel is scanned
+	AD1CON2bits.SMPI    = (NUM_AD_CHAN-1) ;
 	AD1CON4bits.DMABL   = 0 ;	// Each buffer contains 1 word
 	
 	
@@ -161,18 +205,18 @@ void udb_init_ADC( void )
 	
 	
 //  DMA Setup
-	DMA0CONbits.AMODE = 2 ;			// Configure DMA for Peripheral indirect mode
-	DMA0CONbits.MODE  = 2 ;			// Configure DMA for Continuous Ping-Pong mode
+	DMA0CONbits.AMODE = 2 ;		// Configure DMA for Peripheral indirect mode
+	DMA0CONbits.MODE  = 2 ;		// Configure DMA for Continuous Ping-Pong mode
 	DMA0PAD=(int)&ADC1BUF0 ;
 	DMA0CNT = NUM_AD_CHAN-1 ;					
-	DMA0REQ = 13 ;					// Select ADC1 as DMA Request source
+	DMA0REQ = 13 ;				// Select ADC1 as DMA Request source
 	
 	DMA0STA = __builtin_dmaoffset(BufferA) ;
 	DMA0STB = __builtin_dmaoffset(BufferB) ;
 	
-	IFS0bits.DMA0IF = 0 ;			//Clear the DMA interrupt flag bit
+	IFS0bits.DMA0IF = 0 ;		//Clear the DMA interrupt flag bit
     IEC0bits.DMA0IE = 1 ;		//Set the DMA interrupt enable bit
-	_DMA0IP = 5 ;					    //Set the DMA ISR priority
+	_DMA0IP = 5 ;				//Set the DMA ISR priority
 	
 	DMA0CONbits.CHEN = 1 ;		// Enable DMA
 	

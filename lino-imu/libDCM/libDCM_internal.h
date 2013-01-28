@@ -21,6 +21,10 @@
 
 #include "libDCM.h"
 
+//<GUIOTT>
+ #include "testPoint.h"
+ //</GUIOTT>
+
 void dcm_init_rmat(void) ;
 
 void estYawDrift(void) ;

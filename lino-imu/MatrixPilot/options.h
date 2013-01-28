@@ -42,6 +42,10 @@
 // If building for the UDB4, use the MatrixPilot-udb4.mcw project workspace. 
 #define BOARD_TYPE 	UDB4_BOARD
 
+////////////////////////////////////////////////////////////////////////////////
+// Select Clock Configuration (Set to CRYSTAL_CLOCK or FRC8X_CLOCK)
+// on the UDB4 CRYSTAL_CLOCK is the 8 MHz crystal for a 40Mips operation
+#define CLOCK_CONFIG 	CRYSTAL_CLOCK
 
 ////////////////////////////////////////////////////////////////////////////////
 // Use board orientation to change the mounting direction of the board.
@@ -242,6 +246,10 @@
 #define PASSTHROUGH_D_OUTPUT_CHANNEL		CHANNEL_UNUSED
 
 
+// PWM rate for ESCs
+#define ESC_HZ 400
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Servo Reversing Configuration
 // Here you can choose which reversing switches use hardware switches (only available on classic boards),
@@ -365,6 +373,7 @@
 //   NOTE: Can only be set this higher than 0 if USE_PPM_INPUT is enabled above.
 // For UDB4 boards: Set to 0-4.  Analog pins are AN15 - AN18.
 #define NUM_ANALOG_INPUTS					0
+
 
 // Channel numbers for each analog input
 //   - Only assign each channel number to one analog sensor

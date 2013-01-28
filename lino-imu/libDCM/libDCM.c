@@ -21,11 +21,15 @@
 
 #include "libDCM_internal.h"
 
+//<GUIOTT>
+ #include "testPoint.h"
+ //</GUIOTT>
+
 union dcm_fbts_word dcm_flags ;
 
 // Calibrate for 10 seconds before moving servos
-#define CALIB_COUNT		  400		// 10 seconds at 40 Hz
-#define GPS_COUNT		 1000		// 25 seconds at 40 Hz
+#define CALIB_COUNT	(10 * HEARTBEAT_HZ)		// 10 seconds at 40 Hz
+#define GPS_COUNT	((unsigned int)(25 * (unsigned int)HEARTBEAT_HZ))// seconds
 
 
 #if ( HILSIM == 1 )
@@ -97,15 +101,26 @@ void udb_callback_read_sensors(void)
 }
 
 
-// Called at 40Hz
+//<GUIOTT>
+// Called at HEARTBEAT_HZ
 void udb_servo_callback_prepare_outputs(void)
 {
 #if (MAG_YAW_DRIFT == 1)
-	// This is a simple counter to do stuff at 4hz
-	if ( udb_heartbeat_counter % 10 == 0 )
-	{
-		rxMagnetometer() ;
-	}
+    static int fourHzCounter = 0;
+    // This is a simple counter to do stuff at 4hz
+    if (++fourHzCounter >= (HEARTBEAT_HZ / 4))
+    {
+        fourHzCounter = 0;
+        rxMagnetometer();
+
+       //<GUIOTT>
+       #if (MAG_TESTPOINT == 1)
+            testPoint();
+       #endif
+       //</GUIOTT>
+    }
+//</GUIOTT>
+
 #endif
 		
 	if (dcm_flags._.calib_finished) {

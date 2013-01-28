@@ -106,6 +106,18 @@ void udb_init_capture(void)
 
 
 #if (USE_PPM_INPUT != 1)
+//<GUIOTT>
+// make pwIn values independent of clock and timer rates
+// this scaling is relative to the legacy FREQOSC of 32e6
+#define PWINSCALE (65536 * 32E6 / FREQOSC)
+
+void set_pwIn(int channel, int pw) {
+    union longww pww;
+    pww.WW = __builtin_muluu(pw, (int) PWINSCALE);
+    udb_pwIn[channel] = pww._.W1;
+}
+//</GUIOTT>
+
 
 // Input Channel 1
 void __attribute__((__interrupt__,__no_auto_psv__)) _IC1Interrupt(void)
@@ -127,8 +139,7 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _IC1Interrupt(void)
 	}
 	else
 	{
-		udb_pwIn[1] = time - rise[1] ;
-		
+        set_pwIn(1, time - rise[1]);
 #if ( FAILSAFE_INPUT_CHANNEL == 1 )
 		if ( (udb_pwIn[FAILSAFE_INPUT_CHANNEL] > FAILSAFE_INPUT_MIN) && (udb_pwIn[FAILSAFE_INPUT_CHANNEL] < FAILSAFE_INPUT_MAX ) )
 		{
@@ -168,7 +179,7 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _IC2Interrupt(void)
 	}
 	else
 	{
-		udb_pwIn[2] = time - rise[2] ;
+        set_pwIn(2, time - rise[2]);
 		
 #if ( FAILSAFE_INPUT_CHANNEL == 2 )
 		if ( (udb_pwIn[FAILSAFE_INPUT_CHANNEL] > FAILSAFE_INPUT_MIN) && (udb_pwIn[FAILSAFE_INPUT_CHANNEL] < FAILSAFE_INPUT_MAX ) )
@@ -209,7 +220,7 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _IC3Interrupt(void)
 	}
 	else
 	{
-		udb_pwIn[3] = time - rise[3] ;
+        set_pwIn(3, time - rise[3]);
 		
 #if ( FAILSAFE_INPUT_CHANNEL == 3 )
 		if ( (udb_pwIn[FAILSAFE_INPUT_CHANNEL] > FAILSAFE_INPUT_MIN) && (udb_pwIn[FAILSAFE_INPUT_CHANNEL] < FAILSAFE_INPUT_MAX ) )
@@ -250,7 +261,7 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _IC4Interrupt(void)
 	}
 	else
 	{
-		udb_pwIn[4] = time - rise[4] ;
+        set_pwIn(4, time - rise[4]);
 		
 #if ( FAILSAFE_INPUT_CHANNEL == 4 )
 		if ( (udb_pwIn[FAILSAFE_INPUT_CHANNEL] > FAILSAFE_INPUT_MIN) && (udb_pwIn[FAILSAFE_INPUT_CHANNEL] < FAILSAFE_INPUT_MAX ) )
@@ -291,7 +302,7 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _IC5Interrupt(void)
 	}
 	else
 	{
-		udb_pwIn[5] = time - rise[5] ;
+        set_pwIn(5, time - rise[5]);
 		
 #if ( FAILSAFE_INPUT_CHANNEL == 5 )
 		if ( (udb_pwIn[FAILSAFE_INPUT_CHANNEL] > FAILSAFE_INPUT_MIN) && (udb_pwIn[FAILSAFE_INPUT_CHANNEL] < FAILSAFE_INPUT_MAX ) )
@@ -332,7 +343,7 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _IC6Interrupt(void)
 	}
 	else
 	{
-		udb_pwIn[6] = time - rise[6] ;
+        set_pwIn(6, time - rise[6]);
 		
 #if ( FAILSAFE_INPUT_CHANNEL == 6 )
 		if ( (udb_pwIn[FAILSAFE_INPUT_CHANNEL] > FAILSAFE_INPUT_MIN) && (udb_pwIn[FAILSAFE_INPUT_CHANNEL] < FAILSAFE_INPUT_MAX ) )
@@ -373,7 +384,7 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _IC7Interrupt(void)
 	}
 	else
 	{
-		udb_pwIn[7] = time - rise[7] ;
+        set_pwIn(7, time - rise[7]);
 		
 #if ( FAILSAFE_INPUT_CHANNEL == 7 )
 		if ( (udb_pwIn[FAILSAFE_INPUT_CHANNEL] > FAILSAFE_INPUT_MIN) && (udb_pwIn[FAILSAFE_INPUT_CHANNEL] < FAILSAFE_INPUT_MAX ) )
@@ -414,7 +425,7 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _IC8Interrupt(void)
 	}
 	else
 	{
-		udb_pwIn[8] = time - rise[8] ;
+        set_pwIn(8, time - rise[8]);
 		
 #if ( FAILSAFE_INPUT_CHANNEL == 8 )
 		if ( (udb_pwIn[FAILSAFE_INPUT_CHANNEL] > FAILSAFE_INPUT_MIN) && (udb_pwIn[FAILSAFE_INPUT_CHANNEL] < FAILSAFE_INPUT_MAX ) )

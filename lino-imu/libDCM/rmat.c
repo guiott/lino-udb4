@@ -37,24 +37,29 @@
 
 #define RMAX15 0b0110000000000000	//	1.5 in 2.14 format
 
-#define GGAIN SCALEGYRO*6*(RMAX*0.025)		//	integration multiplier for gyros
+#define GGAIN SCALEGYRO*6*(RMAX*(1.0/HEARTBEAT_HZ))	//integration multiplier for gyros
 fractional ggain[] =  { GGAIN , GGAIN , GGAIN } ;
 
 unsigned int spin_rate = 0 ;
 fractional spin_axis[] = { 0 , 0 , RMAX } ;
 
-#if ( BOARD_TYPE == UDB3_BOARD || BOARD_TYPE == AUAV1_BOARD || BOARD_TYPE == UDB4_BOARD )
+#if ( BOARD_TYPE == UDB3_BOARD || BOARD_TYPE == AUAV1_BOARD )
 //Paul's gains corrected for GGAIN
 #define KPROLLPITCH 256*5
 #define KIROLLPITCH 256
-#else
-//Paul's gains:
+
+#elif ( BOARD_TYPE == UDB4_BOARD )
+//Paul's gains for 6G accelerometers
 #define KPROLLPITCH 256*10
-#define KIROLLPITCH 256*2
+#define KIROLLPITCH (20400 / HEARTBEAT_HZ)
+
+#else
+#error Unsupported BOARD_TYPE
 #endif
 
 #define KPYAW 256*4
-#define KIYAW 32
+//#define KIYAW 32
+#define KIYAW (1280 / HEARTBEAT_HZ)
 
 #define GYROSAT 15000
 // threshold at which gyros may be saturated
@@ -354,8 +359,8 @@ void roll_pitch_drift()
 long int accelerometer_earth_integral[3] = { 0 , 0 , 0 } ;
 int GPS_velocity_previous[3] = { 0 , 0 , 0 } ;
 unsigned int accelerometer_samples = 0 ;
-#define MAX_ACCEL_SAMPLES 45
-#define ACCEL_SAMPLES_PER_SEC 40
+#define MAX_ACCEL_SAMPLES (1.1 * HEARTBEAT_HZ)
+#define ACCEL_SAMPLES_PER_SEC HEARTBEAT_HZ
 
 #ifdef NEW_ACCELERATION_COMPENSATION
 void roll_pitch_drift()
@@ -614,9 +619,13 @@ void RotVector2RotMat( fractional rotation_matrix[] , fractional rotation_vector
 }
 
 #define MAG_LATENCY 0.085 // seconds
-#define MAG_LATENCY_COUNT ( ( int ) ( MAG_LATENCY / 0.025 ) )
+#define MAG_LATENCY_COUNT ( ( int ) ( HEARTBEAT_HZ * MAG_LATENCY ) )
 
-int mag_latency_counter = 10 - MAG_LATENCY_COUNT ;
+// Since mag_drift is called every heartbeat the first assignment to rmatDelayCompensated
+// will occur at udb_heartbeat_counter = (.25 - MAG_LATENCY) seconds.
+// Since rxMagnetometer is called  at multiples of .25 seconds, this initial
+// delay offsets the 4Hz updates of rmatDelayCompensated by MAG_LATENCY seconds.
+int mag_latency_counter = (HEARTBEAT_HZ / 4) - MAG_LATENCY_COUNT;
 
 void mag_drift()
 {
@@ -640,7 +649,7 @@ void mag_drift()
 	if ( mag_latency_counter == 0 )
 	{
 		VectorCopy ( 9 , rmatDelayCompensated , rmat ) ;
-		mag_latency_counter = 10 ; // not really needed, but its good insurance
+        mag_latency_counter = (HEARTBEAT_HZ / 4); // not really needed, but its good insurance
 	}
 	
 	if ( dcm_flags._.mag_drift_req )
@@ -667,7 +676,7 @@ void mag_drift()
 			VectorCopy ( 9 , rmatDelayCompensated , rmat ) ;		
 		}
 
-		mag_latency_counter = 10 - MAG_LATENCY_COUNT ; // setup for the next reading
+        mag_latency_counter = (HEARTBEAT_HZ / 4) - MAG_LATENCY_COUNT; // setup for the next reading
 
 //		Compute the mag field in the earth frame
 
@@ -830,15 +839,15 @@ void calibrate_gyros(void)
 		spin_rate_over2 = spin_rate>>1 ;
 		VectorMultiply( 3 , omegacorrPweighted , spin_axis , omegacorrP ) ; // includes 1/2
 
-		calib_accum = __builtin_mulsu( omegacorrPweighted[0] , (unsigned int )( 0.025*GGAIN/GYRO_CALIB_TAU ) ) ;
+        calib_accum = __builtin_mulsu(omegacorrPweighted[0], (unsigned int) ((1.0 / HEARTBEAT_HZ) * GGAIN / GYRO_CALIB_TAU));
 		gain_change = __builtin_divsd( calib_accum , spin_rate_over2 ) ;
 		ggain[0] = adjust_gyro_gain( ggain[0] , gain_change ) ;
 
-		calib_accum = __builtin_mulsu( omegacorrPweighted[1] , (unsigned int )( 0.025*GGAIN/GYRO_CALIB_TAU ) ) ;
+        calib_accum = __builtin_mulsu(omegacorrPweighted[1], (unsigned int) ((1.0 / HEARTBEAT_HZ) * GGAIN / GYRO_CALIB_TAU));
 		gain_change = __builtin_divsd( calib_accum , spin_rate_over2 ) ;
 		ggain[1] = adjust_gyro_gain( ggain[1] , gain_change ) ;
 
-		calib_accum = __builtin_mulsu( omegacorrPweighted[2] , (unsigned int )( 0.025*GGAIN/GYRO_CALIB_TAU ) ) ;
+        calib_accum = __builtin_mulsu(omegacorrPweighted[2], (unsigned int) ((1.0 / HEARTBEAT_HZ) * GGAIN / GYRO_CALIB_TAU));
 		gain_change = __builtin_divsd( calib_accum , spin_rate_over2 ) ;
 		ggain[2] = adjust_gyro_gain( ggain[2] , gain_change ) ;
 	}

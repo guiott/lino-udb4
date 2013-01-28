@@ -21,6 +21,10 @@
 
 #include "libUDB_internal.h"
 
+//<GUIOTT>
+#include "testPoint.h"
+//</GUIOTT>*/
+
 #if(USE_I2C1_DRIVER == 1)
 #include "I2C.h"
 #include "events.h"
@@ -46,7 +50,13 @@
 #endif
 
 #elif (BOARD_TYPE == UDB4_BOARD)
+/*<GUIOTT>
 #define CPU_LOAD_PERCENT	1677     // = (( 65536 * 100  ) / ( (32000000 / 2) / (16 * 256) )
+*/
+// define CPU_RES so that 1 count is .01% => 10,000 counts = 100%
+#define CPU_RES (FREQOSC / 20000)
+// define CPU_LOAD_PERCENT to return units of percent
+#define CPU_LOAD_PERCENT ((65536.0 * 100.0 * CPU_RES * 2) / FREQOSC)
 //      65536 to move result into upper 16 bits of 32 bit word
 //      100 to make a percentage
 //      32000000 frequency of chrystal clock
@@ -56,6 +66,14 @@
 
 unsigned int cpu_timer = 0 ;
 unsigned int _cpu_timer = 0 ;
+
+unsigned long idle_timer = 0;
+unsigned long _idle_timer = 0;
+
+// Local elapsed time from boot (in heartbeats), used for timestamping.
+// rolls over at 2^32 counts: interval is 497 days at 100Hz
+unsigned long uptime = 0;
+//</GUIOTT>
 
 unsigned int udb_heartbeat_counter = 0 ;
 #define HEARTBEAT_MAX	57600		// Evenly divisible by many common values: 2^8 * 3^2 * 5^2
@@ -106,18 +124,27 @@ void udb_init_clock(void)	/* initialize timers */
 	flexiFunctionServiceInit();
 #endif
 	
-	// Initialize timer1, used as the 40Hz heartbeat of libUDB.
+	// Initialize timer1, used as the HEARTBEAT_HZ heartbeat of libUDB.
 	TMR1 = 0 ;
+
+
 #if (BOARD_TYPE == UDB4_BOARD)
-	PR1 = 50000 ;			// 25 millisecond period at 16 Mz clock, tmr prescale = 8
-	T1CONbits.TCKPS = 1;	// prescaler = 8
+//<GUIOTT>
+// clock is 40MHz max: prescaler = 64, PR1  < 65,535
+  T1CONbits.TCKPS = 2; // prescaler = 64
+  PR1 = (FREQOSC / (64 * CLK_PHASES)) / HEARTBEAT_HZ; // period 1/HEARTBEAT_HZ
 #elif ( CLOCK_CONFIG == CRYSTAL_CLOCK )
+#error ("code not yet using HEARTBEAT_HZ")
 	PR1 = 12500 ;			// 25 millisecond period at 16 Mz clock, inst. prescale 4, tmr prescale 8	
 	T1CONbits.TCKPS = 1;	// prescaler = 8
 #elif ( CLOCK_CONFIG == FRC8X_CLOCK )
+#error ("code not yet using HEARTBEAT_HZ")
 	PR1 = 46080 ;			// 25 millisecond period at 58.982 Mz clock,inst. prescale 4, tmr prescale 8	
 	T1CONbits.TCKPS = 1;	// prescaler = 8
 #endif
+//</GUIOTT>
+
+
 	T1CONbits.TCS = 0 ;		// use the crystal to drive the clock
 	_T1IP = 6 ;				// High priority
 	_T1IF = 0 ;				// clear the interrupt
@@ -129,8 +156,8 @@ void udb_init_clock(void)	/* initialize timers */
 	// which enables the calculation of the CPU loading.
 	// Timer 5 will be turned on in interrupt routines and turned off in main()
 	TMR5 = 0 ; 				// initialize timer
-	PR5 = 16*256 ;			// measure instructions in groups of 16*256 
-	_cpu_timer = 0 ;		// initialize the load counter
+  PR5 = CPU_RES - 1; // measure instruction cycles in units of CPU_RES
+	// _cpu_timer = 0 ;		// initialize the load counter
 	T5CONbits.TCKPS = 0 ;	// no prescaler
 	T5CONbits.TCS = 0 ;	    // use the crystal to drive the clock
 	_T5IP = 6 ;				// high priority, but ISR is very short
@@ -168,35 +195,48 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _T1Interrupt(void)
 	indicate_loading_inter ;
 	interrupt_save_set_corcon ;
 	
+	static boolean secToggle = true;
+    static int twoHzCounter = 0;
+    
 	_T1IF = 0 ;			// clear the interrupt
-	
+
+    //<GUIOTT>
+        #if (HEARTBEAT_TESTPOINT == 1)
+            testPoint();
+        #endif
+   //</GUIOTT>
+
 	// Start the sequential servo pulses
 	start_pwm_outputs() ;
 	
-	// Capture cpu_timer once per second.
-	if (udb_heartbeat_counter % 40 == 0)
-	{
-		T5CONbits.TON = 0 ;		// turn off timer 5
-		cpu_timer = _cpu_timer ;// snapshot the load counter
-		_cpu_timer = 0 ; 		// reset the load counter
-		T5CONbits.TON = 1 ;		// turn on timer 5
-	}
-	
 	// Call the periodic callback at 2Hz
-	if (udb_heartbeat_counter % 20 == 0)
+	if (++twoHzCounter >= (HEARTBEAT_HZ / 2)) 
 	{
+        twoHzCounter = 0;
 		udb_background_callback_periodic() ;
-    //<GUIOTT>
-    udb_led_toggle(LED_ORANGE);
-    //</GUIOTT>
 
+        //<GUIOTT>
+        #if (TWO_HZ_TESTPOINT == 1)
+            testPoint();
+        #endif
+        udb_led_toggle(LED_ORANGE);
+        //</GUIOTT>
+    
+	// Capture cpu_timer once per second.
+        if ((secToggle = !secToggle)) // assignment is intentional
+        { 
+            T5CONbits.TON = 0; // turn off timer 5
+            cpu_timer = _cpu_timer; // snapshot the load counter
+            _cpu_timer = 0; // reset the load counter
+            T5CONbits.TON = 1; // turn on timer 5
+        }
 	}
 	
 	
-	// Trigger the 40Hz calculations, but at a lower priority
+    // Trigger the HEARTBEAT_HZ calculations, but at a lower priority
 	_THEARTBEATIF = 1 ;
 	
-	
+	uptime++;
 	udb_heartbeat_counter = (udb_heartbeat_counter+1) % HEARTBEAT_MAX;
 	
 	interrupt_restore_corcon ;
@@ -235,6 +275,7 @@ void __attribute__((__interrupt__,__no_auto_psv__)) _T3Interrupt(void)
 
 unsigned char udb_cpu_load(void)
 {
+    // scale cpu_timer to seconds*100 for percent loading
 	return (unsigned char)(__builtin_muluu(cpu_timer, CPU_LOAD_PERCENT) >> 16) ;
 }
 

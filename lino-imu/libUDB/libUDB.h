@@ -84,7 +84,10 @@ void udb_background_callback_triggered(void);			// Callback
 // from 0-100.
 unsigned char udb_cpu_load(void);
 
-// Read-only value increments with each 40Hz heartbeat
+// number of heartbeats per second
+#define HEARTBEAT_HZ 40
+
+// Read-only value increments with each heartbeat
 extern unsigned int udb_heartbeat_counter ;
 
 

@@ -50,7 +50,7 @@ _FGS( CODE_PROT_OFF ) ;				// no protection
 _FICD( 0xC003 ) ;					// normal use of debugging port
 
 #elif (BOARD_TYPE == UDB4_BOARD)
-_FOSCSEL(FNOSC_PRIPLL) ; // Primary Oscillator (XT, HS, EC) w/ PLL medium speed XTAL plus PLL
+_FOSCSEL(FNOSC_PRI) ; // Primary Oscillator (XT, HS, EC) w/ PLL medium speed XTAL
 _FOSC(	FCKSM_CSECMD &   // Clock switching is enabled, Fail-Safe Clock Monitor is disabled
 		OSCIOFNC_OFF &   // OSC2 pin has no digital I/O function
 		POSCMD_XT ) ;    // XT Oscillator Mode
@@ -59,15 +59,15 @@ _FWDT(	FWDTEN_OFF &     // Watchdog timer enabled/disabled by user software
 _FGS(	GSS_OFF &        // User program memory is not code-protected
 		GCP_OFF &        // User program memory is not code-protected
 		GWRP_OFF ) ;     // User program memory is not write-protected
-_FPOR(	FPWRT_PWR128 ) ; // 1=POR Timer disabled, otherwise 2-4-8-16-32-64-128ms
+_FPOR(	FPWRT_PWR64 ) ; // 1=POR Timer disabled, otherwise 2-4-8-16-32-64-128ms
 _FICD(	JTAGEN_OFF &     // JTAG is Disabled
 		ICS_PGD2 ) ;     // Communicate on PGC2/EMUC2 and PGD2/EMUD2
 
  //<GUIOTT>
   /* CLOCK_FREQ = 8 MHz
-     FREQOSC = CLOCK_FREQ*M/(N1*N2) = 8M*32/(2*4)=32Mhz
+     FREQOSC = CLOCK_FREQ*M/(N1*N2) = 8M*40/(2*2)=80Mhz
      CLK_PHASES		2
-     FCY = FREQOSC / CLK_PHASES = 16
+     FCY = FREQOSC / CLK_PHASES = 40
   */
   #define FCY FREQOSC / CLK_PHASES
 
@@ -124,7 +124,45 @@ void udb_init(void)
 	defaultCorcon = CORCON ;
 	
 #if (BOARD_TYPE == UDB4_BOARD)
-	PLLFBDbits.PLLDIV = 30 ; // FOSC = 32 MHz (XT = 8.00MHz, N1=2, N2=4, M = 32)
+  //<GUIOTT>
+  /*
+   * Clock speed up to 80MHz following the Mark Whitehorn branch on UDB4
+   * The following values have been parametrized:
+   * DCM frame rate: changed from hardwired 40Hz to parameter HEARTBEAT_HZ
+   * PID loop frame rate: changed from hardwired 40Hz to parameter PID_HZ
+   * ESC frame rate ESC_HZ
+
+   ** note that the above three rates are not orthogonal
+
+    * Mark Whitehorn notes
+
+    * CPU clock: (limitation: UDB4 only: BOARD_TYPE not in {GREEN,RED,UDB3, RUSTYS}
+    * and BOARD_IS_CLASSIC_UDB==0), changed (or added) following parameters and macros
+    * CLK_PHASES set to 2
+    ** FREQOSC set to 80 MHz (FCY = 40MHz)
+    ** PWMOUTSCALE ratio of Timer 3 frequency T3FREQ to original hardwired 2 MHz
+    *** T3 prescaler was already at max. value of 8
+    ** ADC_CLK speed also increases at 40MIPS since ADCLK_DIV_N_MINUS_1 was at max. value of 63
+    ** I2CBRGVAL in magneto_udb4.c now calculated using FREQOSC and CLK_PHASES to achieve 100KHz rate
+    ** CPU_RES defined such that cpu_timer units are .01%
+    ** CPU_LOAD_PERCENT is changed, I think, but untested since raw cpu_timer values are already in units of .01%
+    ** PWINSCALE is added to make pwIn values independent of CPU clock freq.
+    ** Timer 1 period now calculated from HEARTBEAT_HZ (sets DCM rate)
+    */
+    
+  PLLFBDbits.PLLDIV = 38 ; // FOSC = 80 MHz (XT = 8.00MHz, N1=2, N2=2, M = 40)
+  CLKDIVbits.PLLPOST = 0;  // N1=2
+  CLKDIVbits.PLLPRE = 0;   // N2=2
+  // Clock switching to incorporate PLL
+  __builtin_write_OSCCONH(0x03);		// Initiate Clock Switch to Primary
+	// Oscillator with PLL (NOSC=0b011)
+  __builtin_write_OSCCONL(0x01);		// Start clock switching
+
+#ifndef SIM	
+	while (OSCCONbits.COSC != 0b011);// Wait for Clock switch to occur
+	while(OSCCONbits.LOCK!=1) {};	// Wait for PLL to lock
+#endif
+  //</GUIOT>
 #endif
 	
 	udb_flags.B = 0 ;
@@ -152,7 +190,7 @@ void udb_init(void)
                 I2C1_init();
         #endif
         #if (USE_I2C2_DRIVER == 1)
-                I2C2_init(); //  NEW I2C QUEUE FUNCTION FOR MULTIPLE SENSOR SUPPORT
+            I2C2_init(); // NEW I2C QUEUE FUNCTION FOR MULTIPLE SENSOR SUPPORT
         #endif
         //  I2C1_init() ;
 #endif

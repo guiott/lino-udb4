@@ -21,9 +21,9 @@
 
 #include "libDCM_internal.h"
 
-#define DR_PERIOD (int)((40/GPS_RATE)+4 )
+#define DR_PERIOD ((int)(1.1 * (HEARTBEAT_HZ/GPS_RATE) ))
 
-#define DR_TIMESTEP 0.025
+#define DR_TIMESTEP (1.0/HEARTBEAT_HZ)
 #define MAX16 (4.0*RMAX)
 #define DR_TAU 2.5
 
