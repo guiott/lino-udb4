@@ -22,6 +22,9 @@
 #include "libUDB_internal.h"
 #include "I2C.h"
 
+#define SIM // to avoid hang on simulation
+
+
 #if (BOARD_IS_CLASSIC_UDB)
 #if ( CLOCK_CONFIG == CRYSTAL_CLOCK )
 _FOSC( CSW_FSCM_OFF & HS ) ;		// external high speed crystal
@@ -179,8 +182,8 @@ void udb_init(void)
 #if (ANALOG_RSSI_INPUT_CHANNEL != CHANNEL_UNUSED)
 	rc_signal_strength = 0 ;
 #endif
-	
-	udb_init_leds() ;
+
+  udb_init_leds() ;
 	udb_init_ADC() ;
 	udb_init_clock() ;
 	udb_init_capture() ;
@@ -228,7 +231,7 @@ void udb_init_leds( void )
 	
 #elif (BOARD_TYPE == UDB4_BOARD)
   int LedCnt;
-  unsigned int LedDelay=20000;
+  unsigned int LedDelay=100;
 	_TRISE1 = _TRISE2 = _TRISE3 = _TRISE4 = 0 ;
 	_LATE1 = _LATE2 = _LATE3 = _LATE4 = LED_OFF ;
   //<GUIOTT>
@@ -250,8 +253,7 @@ void udb_init_leds( void )
   }
   //</GUIOTT>
 #endif
-	
-	return ;
+ return ;
 }
 
 #ifdef INITIALIZE_VERTICAL // for VTOL, vertical initialization

@@ -130,6 +130,12 @@
         <itemPath>../../MAVLink/include/matrixpilot/testsuite.h</itemPath>
         <itemPath>../../MAVLink/include/matrixpilot/version.h</itemPath>
       </logicalFolder>
+      <logicalFolder name="f2" displayName="TimeConvert" projectFiles="true">
+        <itemPath>../../TimeConvert/basictypes.h</itemPath>
+        <itemPath>../../TimeConvert/constants.h</itemPath>
+        <itemPath>../../TimeConvert/gnss_error.h</itemPath>
+        <itemPath>../../TimeConvert/time_conversion.h</itemPath>
+      </logicalFolder>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -212,6 +218,9 @@
         <itemPath>../parameter_table.c</itemPath>
         <itemPath>../airspeedCntrl.c</itemPath>
         <itemPath>../altitudeCntrlVariable.c</itemPath>
+      </logicalFolder>
+      <logicalFolder name="f2" displayName="TimeConvert" projectFiles="true">
+        <itemPath>../../TimeConvert/time_conversion.c</itemPath>
       </logicalFolder>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
@@ -329,7 +338,7 @@
         <property key="general-code-protect" value="no_code_protect"/>
         <property key="general-write-protect" value="no_write_protect"/>
         <property key="generate-cross-reference-file" value="true"/>
-        <property key="heap-size" value=""/>
+        <property key="heap-size" value="512"/>
         <property key="input-libraries" value=""/>
         <property key="linker-symbols" value=""/>
         <property key="map-file"
@@ -464,7 +473,7 @@
         <property key="enable-large-arrays" value="false"/>
         <property key="enable-omit-frame-pointer" value="false"/>
         <property key="enable-procedural-abstraction" value="false"/>
-        <property key="enable-short-double" value="false"/>
+        <property key="enable-short-double" value="true"/>
         <property key="enable-symbols" value="true"/>
         <property key="enable-unroll-loops" value="false"/>
         <property key="extra-include-directories"
@@ -527,7 +536,7 @@
         <property key="general-code-protect" value="no_code_protect"/>
         <property key="general-write-protect" value="no_write_protect"/>
         <property key="generate-cross-reference-file" value="true"/>
-        <property key="heap-size" value=""/>
+        <property key="heap-size" value="512"/>
         <property key="input-libraries" value=""/>
         <property key="linker-symbols" value=""/>
         <property key="map-file"
@@ -558,6 +567,37 @@
         <property key="output-file-format" value="coff"/>
       </C30Global>
       <Simulator>
+        <property key="animationupdates.realtimewatchupdates" value="false"/>
+        <property key="animationupdates.steptime" value=""/>
+        <property key="animationupdates.updatetime" value=""/>
+        <property key="breakoptions.coreerrors" value="Ignore"/>
+        <property key="breakoptions.corewarnings" value="Ignore"/>
+        <property key="breakoptions.peripheralerrors" value="Ignore"/>
+        <property key="breakoptions.peripheralwarnings" value="Ignore"/>
+        <property key="breakoptions.stimulusmessages.notes" value="Ignore"/>
+        <property key="breakoptions.stimulusmessags.errors" value="Ignore"/>
+        <property key="breakoptions.stimulusmessags.warnings" value="Ignore"/>
+        <property key="breakoptions.wdtwarnings" value="Ignore"/>
+        <property key="codecoverage.enabled" value="Disable"/>
+        <property key="codecoverage.enableoutputtofile" value="false"/>
+        <property key="codecoverage.outputfile" value=""/>
+        <property key="oscillator.auxfrequency" value="120"/>
+        <property key="oscillator.auxfrequencyunit" value="Mega"/>
+        <property key="oscillator.frequency" value="40"/>
+        <property key="oscillator.frequencyunit" value="Mega"/>
+        <property key="oscillator.rcfrequency" value="250"/>
+        <property key="oscillator.rcfrequencyunit" value="Kilo"/>
+        <property key="performancedata.show" value="false"/>
+        <property key="periphADC1.altscl" value="false"/>
+        <property key="periphADC2.altscl" value="false"/>
+        <property key="tracecontrol.select" value="0"/>
+        <property key="tracecontrol.timestamp" value="2"/>
+        <property key="tracecontrol.tracebufmax" value="54600"/>
+        <property key="tracecontrol.tracefile" value="/Users/guiott/mpdeftrace.log"/>
+        <property key="tracecontrol.traceresetonrun" value="false"/>
+        <property key="uart1io.output" value="window"/>
+        <property key="uart1io.outputfile" value=""/>
+        <property key="uart1io.uartioenabled" value="false"/>
       </Simulator>
     </conf>
   </confs>

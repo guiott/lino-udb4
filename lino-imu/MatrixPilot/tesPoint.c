@@ -21,7 +21,7 @@
 //<GUIOTT>
 #include "testPoint.h"
 
-void tesPoint(void)
+void testPoint(void)
 {
     _LATA1 ^= 1;
 }

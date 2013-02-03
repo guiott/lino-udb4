@@ -42,13 +42,13 @@
 #include "libUDB.h"
 
 #ifndef TESTPOINT_H
-// comment the line below to disable testPoint and enable RA1 on SERVO_OUT_PIN_10
-// #define	TESTPOINT_H
+// switch to 0 the define below to disable testPoint and enable RA1 on SERVO_OUT_PIN_10
+#define	TESTPOINT_H 0
 #endif
 
 
 // Enable the routines once at a time to have a correct functioning of the procedure.
-#define TWO_HZ_TESTPOINT 0   
+#define TWO_HZ_TESTPOINT 0
 #define HEARTBEAT_TESTPOINT 0
 #define MAG_TESTPOINT 0
 

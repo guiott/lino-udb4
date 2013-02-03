@@ -21,6 +21,8 @@
 
 #include "defines.h"
 #include "../libDCM/libDCM_internal.h" // Needed for access to internal DCM values
+#include  "../TimeConvert/time_conversion.h"
+
 
 #if (SERIAL_OUTPUT_FORMAT != SERIAL_MAVLINK) // All MAVLink telemetry code is in MAVLink.c
 
@@ -40,6 +42,26 @@ union intbb voltage_temp ;
 volatile int trap_flags __attribute__ ((persistent));
 volatile long trap_source __attribute__ ((persistent));
 volatile int osc_fail_count __attribute__ ((persistent));
+
+// Time structure
+extern struct _TimeS
+{
+    unsigned short utcYear;
+    unsigned char utcMonth;
+    unsigned char utcDay;
+    unsigned char utcHour;
+    unsigned char utcMinute;
+    float utcSeconds;
+};
+
+extern union __TimeS
+{
+    struct _TimeS I;// to use as integers or chars, little endian LSB first
+    char C[TIME_S_SIZE];  // to use as bytes to send on I2C buffer
+}TimeS;
+
+
+
 void sio_newMsg(unsigned char);
 void sio_voltage_low( unsigned char inchar ) ;
 void sio_voltage_high( unsigned char inchar ) ;
@@ -122,7 +144,7 @@ void init_serial()
 //	udb_serial_set_rate(230400) ;
 //	udb_serial_set_rate(460800) ;
 //	udb_serial_set_rate(921600) ; // yes, it really will work at this rate
-	
+  
 	return ;
 }
 
@@ -217,6 +239,10 @@ void GO_cmd_parser(int Cmd)
 
         case 'S':
             GO_serial_input_nav_data_S();
+            break;
+
+        case 'T':
+            GO_serial_output_time_data_T();
             break;
 
         default:
@@ -586,6 +612,56 @@ void GO_serial_output_nav_data_K( void )
     GO_serial_output_bin(LastIndx+2);
 	return ;
 }
+
+
+void GO_serial_output_time_data_T( void )
+{
+    /*
+     The command string is composed by an array of unsigned char:
+     0      Header	 @
+     1      Id		   0	ASCII	(not used here, just for compatibility)
+     2      Cmd		   K 	ASCII
+     3      CmdLen	 Num of bytes (bin) following (checksum included)
+		 4-5    utcYear (unsigned short int)
+     6      utcMonth (unsigned char)
+     7      utcDay (unsigned char)
+     8      utcHour (unsigned char)
+     9      utcMinute (unsigned char utcMinute)
+     10-13  utcSeconds   (float)
+     14     Checksum 0-255	obtained by adding in a 8 bit variable all the bytes composing the message (checksum itself excluded)
+     */
+
+    int H = 4; // Head length, number of characters in buffer before valid data
+
+    int LastIndx = 13; //change this value only according to the buffer length
+
+    int Ndata=LastIndx-H+1;//number of valid data=last index-head length+1 (chk)
+
+    TIMECONV_GetUTCTimeFromGPSfix(week_no.BB, tow.WW,
+                                 &TimeS.I.utcYear, &TimeS.I.utcMonth,
+                                 &TimeS.I.utcDay, &TimeS.I.utcHour,
+                                 &TimeS.I.utcMinute, &TimeS.I.utcSeconds);
+
+    Tmp_serial_buffer[0]= HEADER;
+    Tmp_serial_buffer[1]='0';
+    Tmp_serial_buffer[2]='T';
+    Tmp_serial_buffer[3]= Ndata;
+    Tmp_serial_buffer[4]= TimeS.C[1]; // Year MSB
+    Tmp_serial_buffer[5]= TimeS.C[0]; // Year LSB
+    Tmp_serial_buffer[6]= TimeS.C[2]; // Month
+    Tmp_serial_buffer[7]= TimeS.C[3]; // Day
+    Tmp_serial_buffer[8]= TimeS.C[4]; // Hours
+    Tmp_serial_buffer[9]= TimeS.C[5]; // Minutes
+    Tmp_serial_buffer[10]= TimeS.C[9];// Seconds MSB
+    Tmp_serial_buffer[11]= TimeS.C[8];// Seconds
+    Tmp_serial_buffer[12]= TimeS.C[7];// Seconds
+    Tmp_serial_buffer[13]= TimeS.C[6];// Seconds LSB
+
+    Tmp_serial_buffer[LastIndx+1]=GO_CheckSum(Tmp_serial_buffer, LastIndx);
+    GO_serial_output_bin(LastIndx+2);
+	return ;
+}
+
 
 // add this binary data to the output buffer according to the GUIOTT protocol
 void GO_serial_output_bin(int BuffLen)

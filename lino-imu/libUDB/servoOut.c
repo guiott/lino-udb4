@@ -34,7 +34,7 @@
 #define SERVO_OUT_PIN_8			_LATD7
 #define SERVO_OUT_PIN_9			_LATA4
 //<GUIOTT>
-#ifndef TESTPOINT_H
+#if TESTPOINT_H == 1
     #define SERVO_OUT_PIN_10		_LATA1
 #endif
 //</GUIOTT>
@@ -125,7 +125,7 @@ void udb_init_pwm( void )	// initialize the PWM
 #if (BOARD_TYPE == UDB4_BOARD)
 	_TRISD0 = _TRISD1 = _TRISD2 = _TRISD3 = _TRISD4 = _TRISD5 = _TRISD6 = _TRISD7 = 0 ;
 	if (NUM_OUTPUTS >= 9)  _TRISA4 = 0 ;	
-	if (NUM_OUTPUTS >= 10) _TRISA1 = 0 ;
+	if (NUM_OUTPUTS >= 10 || TESTPOINT_H == 1) _TRISA1 = 0 ;
 	
 	
 #else // Classic board

@@ -50,7 +50,7 @@ int main (void)
 	dcm_init() ;   
 	init_servoPrepare() ;
 	init_states() ;
-  init_behavior() ;
+    init_behavior() ;
 	init_serial() ;
 
 	udb_run() ;

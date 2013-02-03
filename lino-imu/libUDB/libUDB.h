@@ -242,6 +242,10 @@ void udb_serial_callback_received_byte(char rxchar);	// Callback
 // http://www.guiott.com/Rino/CommandDescr/Protocol.htm
 // command K
 void GO_serial_output_nav_data_K( void );
+//command S
+void GO_serial_input_nav_data_S(void);
+//command T
+void GO_serial_output_time_data_T(void);
 // Checksum computation
 unsigned char GO_CheckSum(unsigned char * Buffer, int LastIndx);
 // add this binary data to the output buffer
