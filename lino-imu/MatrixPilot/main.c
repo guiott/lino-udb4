@@ -41,7 +41,6 @@
 
 #include "defines.h"
 
-
 //	main program for testing the IMU.
 
 int main (void)
