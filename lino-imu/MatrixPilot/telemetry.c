@@ -22,7 +22,7 @@
 #include "defines.h"
 #include "../libDCM/libDCM_internal.h" // Needed for access to internal DCM values
 #include  "../TimeConvert/time_conversion.h"
-
+#include "dsNavI2C.h"
 
 #if (SERIAL_OUTPUT_FORMAT != SERIAL_MAVLINK) // All MAVLink telemetry code is in MAVLink.c
 
@@ -60,7 +60,40 @@ extern union __TimeS
     char C[TIME_S_SIZE];  // to use as bytes to send on I2C buffer
 }TimeS;
 
+// TX Buffer
+extern struct _TxBuff
+{
+    int VelDes; // mean desired speed mm/s
+    int YawDes; // desired orientation angle (set point)(Degx10 0-3599)
+    int YawMes; // measured orientation binary angle (process control) (Degx10 0-3599)
+    char MasterFlag;// to set the dsNav board as a master
+    char NewFlag;   // new values sent. Set at the end to close the cycle
+};
 
+
+extern union __TxBuff
+{
+    struct _TxBuff I;// to use as integers or chars, little endian LSB first
+    unsigned char C[I2C_BUFF_SIZE_TX];  // to use as bytes to send on I2C buffer
+}I2CTxBuff;
+
+
+// RX Buffer
+extern struct _RxBuff
+{
+    float PosXmes;  // current X position coordinate
+    float PosYmes;  // current Y position coordinate
+    int VelInt[4];  // speed in mm/s as an integer for all the wheels
+    int ADCValue[4];// 64 sample average ADC also for slave
+    unsigned char stasis_err;   // number of times imu and wheels very different
+    unsigned char stasis_alarm; // signal too many stasis errors
+};
+
+extern union __RxBuff
+{
+    struct _RxBuff I;// to use as integers or chars, little endian LSB first
+    unsigned char C[I2C_BUFF_SIZE_RX];  // to use as bytes to send on I2C buffer
+}I2CRxBuff;
 
 void sio_newMsg(unsigned char);
 void sio_voltage_low( unsigned char inchar ) ;
@@ -108,28 +141,9 @@ unsigned char Tmp_serial_buffer[SERIAL_BUFFER_SIZE] ;
 unsigned char RX_serial_buffer[SERIAL_BUFFER_SIZE] ;
 int RxBuffindx; // buffer pointer
 int RxBuffCnt;  // buffer counter
-#define I2C_BUFF_SIZE_TX 6
-
-// TX Buffer
-struct _TxBuff
-{
-    int VelDes; // mean desired speed mm/s [23]
-    int YawDes; // desired orientation angle (set point)(Degx10 0-3599)
-    int YawMes; // measured orientation binary angle (process control) (0 : 65535 = 360 degrees)
-};
-
-union __TxBuff
-{
-    struct _TxBuff I;// to use as integers or chars, little endian LSB first
-    char C[I2C_BUFF_SIZE_TX];  // to use as bytes to send on I2C buffer
-}I2CTxBuff;
-//</GUIOTT>
-
 
 int sb_index = 0 ;
 int end_index = 0 ;
-
-
 
 void init_serial()
 {
@@ -694,8 +708,8 @@ void GO_I2C_output_yaw(void)
 
     matrix_accum.x = rmat[4];
     matrix_accum.y = rmat[1];
-    I2CTxBuff.I.YawMes = rect_to_polar16(&matrix_accum); // binary angle (0 : 65535 = 360 degrees)
-   // trasmettere I2C yaw????????????????????debug da fare
+    I2CTxBuff.I.YawMes = (int)((float)rect_to_polar16(&matrix_accum))*0.054933633; // Deg x 10 0-3599
+    I2C_txDsnav(); // Transmit the navigation parameters to dsNav
 }
 //</GUIOTT>
 

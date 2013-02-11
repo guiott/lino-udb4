@@ -350,7 +350,7 @@
 // http://www.guiott.com/Rino/CommandDescr/Protocol.htm
 // 
 #define SERIAL_INPUT_FORMAT      SERIAL_IN_GUIOTT
-#define DSNAV_I2C      0            // enable I2C communication with dsNav
+#define DSNAV_I2C      1            // enable I2C communication with dsNav
 //</GUIOTT>
 
 

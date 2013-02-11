@@ -22,6 +22,7 @@
         <itemPath>../../libUDB/NV_memory.h</itemPath>
         <itemPath>../../libUDB/nv_memory_options.h</itemPath>
         <itemPath>../testPoint.h</itemPath>
+        <itemPath>../dsNavI2C.h</itemPath>
       </logicalFolder>
       <logicalFolder name="f1" displayName="libVectorMatrix" projectFiles="true">
         <itemPath>../../libVectorMatrix/dspcommon.inc</itemPath>
