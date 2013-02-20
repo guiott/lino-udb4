@@ -117,9 +117,14 @@ void GO_sio_data ( unsigned char inchar );
 void GO_UartRxError(int Err);
 void GO_cmd_parser(int Cmd); // only if above are correct, start the command parsing
 unsigned char GO_CheckSum(unsigned char* Buffer, int LastIndx);
-void GO_serial_output_nav_data_K (void); // exec command K: send nav params
+void GO_serial_output_imu_data_K (void); // exec command K: send IMU params
+void GO_serial_output_dsnav_data_b( void ); // exec command b: send dsNav params
+void GO_serial_output_time_data_T( void ); // exec command T: send GPS time params
+
 void GO_serial_input_nav_data_S(void);   // cmd S: set speed & direction
+
 void GO_I2C_output_yaw(void); // compute and send yaw value to motor controller
+void GO_serial_output_header(char Cmd, int Indx); // fill the buffer with heading info
 //</GUIOTT>
 
 
@@ -248,7 +253,7 @@ void GO_cmd_parser(int Cmd)
     switch (Cmd)
     {
         case 'K':
-            GO_serial_output_nav_data_K();
+            GO_serial_output_imu_data_K();
             break;
 
         case 'S':
@@ -257,6 +262,10 @@ void GO_cmd_parser(int Cmd)
 
         case 'T':
             GO_serial_output_time_data_T();
+            break;
+
+        case 'b':
+            GO_serial_output_dsnav_data_b();
             break;
 
         default:
@@ -536,9 +545,9 @@ void serial_output( char* format, ... )
 }
 
 //<GUIOTT>
-void GO_serial_output_nav_data_K( void )
+void GO_serial_output_imu_data_K( void )
 {
-    /*
+    /* exec command K: send IMU params
      The command string is composed by an array of unsigned char:
      0      Header	 @
      1      Id		   0	ASCII	(not used here, just for compatibility)
@@ -567,76 +576,120 @@ void GO_serial_output_nav_data_K( void )
      *
      */
  
-    int H = 4; // Head length, number of characters in buffer before valid data
+    int Indx = HEADER_LEN;  // Head length, number of characters in buffer before valid data
 
-    int LastIndx = 46; //change this value only according to the buffer length
+    Tmp_serial_buffer[Indx++]=lat_gps.__.B3; // MSB first
+    Tmp_serial_buffer[Indx++]=lat_gps.__.B2;
+    Tmp_serial_buffer[Indx++]=lat_gps.__.B1;
+    Tmp_serial_buffer[Indx++]=lat_gps.__.B0;
+    Tmp_serial_buffer[Indx++]=long_gps.__.B3; // MSB first
+    Tmp_serial_buffer[Indx++]=long_gps.__.B2;
+    Tmp_serial_buffer[Indx++]=long_gps.__.B1;
+    Tmp_serial_buffer[Indx++]=long_gps.__.B0;
+    Tmp_serial_buffer[Indx++]=alt_sl_gps.__.B3; // MSB first
+    Tmp_serial_buffer[Indx++]=alt_sl_gps.__.B2;
+    Tmp_serial_buffer[Indx++]=alt_sl_gps.__.B1;
+    Tmp_serial_buffer[Indx++]=alt_sl_gps.__.B0;
+    Tmp_serial_buffer[Indx++]=sog_gps._.B1;
+    Tmp_serial_buffer[Indx++]=sog_gps._.B0;
+    Tmp_serial_buffer[Indx++]=cog_gps._.B1;
+    Tmp_serial_buffer[Indx++]=cog_gps._.B0;
+    Tmp_serial_buffer[Indx++]=week_no._.B1;
+    Tmp_serial_buffer[Indx++]=week_no._.B0;
+    Tmp_serial_buffer[Indx++]=tow.__.B3; // MSB first
+    Tmp_serial_buffer[Indx++]=tow.__.B2;
+    Tmp_serial_buffer[Indx++]=tow.__.B1;
+    Tmp_serial_buffer[Indx++]=tow.__.B0;
+    Tmp_serial_buffer[Indx++]=hdop;
+    Tmp_serial_buffer[Indx++]=svs;
+    Tmp_serial_buffer[Indx++]=rmat[0] >> 8;
+    Tmp_serial_buffer[Indx++]=rmat[0];
+    Tmp_serial_buffer[Indx++]=rmat[1] >> 8;
+    Tmp_serial_buffer[Indx++]=rmat[1];
+    Tmp_serial_buffer[Indx++]=rmat[2] >> 8;
+    Tmp_serial_buffer[Indx++]=rmat[2];
+    Tmp_serial_buffer[Indx++]=rmat[3] >> 8;
+    Tmp_serial_buffer[Indx++]=rmat[3];
+    Tmp_serial_buffer[Indx++]=rmat[4] >> 8;
+    Tmp_serial_buffer[Indx++]=rmat[4];
+    Tmp_serial_buffer[Indx++]=rmat[5] >> 8;
+    Tmp_serial_buffer[Indx++]=rmat[5];
+    Tmp_serial_buffer[Indx++]=rmat[6] >> 8;
+    Tmp_serial_buffer[Indx++]=rmat[6];
+    Tmp_serial_buffer[Indx++]=rmat[7] >> 8;
+    Tmp_serial_buffer[Indx++]=rmat[7];
+    Tmp_serial_buffer[Indx++]=rmat[8] >> 8;
+    Tmp_serial_buffer[Indx++]=rmat[8];
+    Tmp_serial_buffer[Indx++]=udb_cpu_load();
 
-    int Ndata=LastIndx-H+1;//number of valid data=last index-head length+1 (chk)
+    GO_serial_output_header('K', Indx);
 
-    Tmp_serial_buffer[0]= HEADER;
-    Tmp_serial_buffer[1]='0';
-    Tmp_serial_buffer[2]='K';
-    Tmp_serial_buffer[3]= Ndata;
-    Tmp_serial_buffer[4]=lat_gps.__.B3; // MSB first
-    Tmp_serial_buffer[5]=lat_gps.__.B2;
-    Tmp_serial_buffer[6]=lat_gps.__.B1;
-    Tmp_serial_buffer[7]=lat_gps.__.B0;
-    Tmp_serial_buffer[8]=long_gps.__.B3; // MSB first
-    Tmp_serial_buffer[9]=long_gps.__.B2;
-    Tmp_serial_buffer[10]=long_gps.__.B1;
-    Tmp_serial_buffer[11]=long_gps.__.B0;
-    Tmp_serial_buffer[12]=alt_sl_gps.__.B3; // MSB first
-    Tmp_serial_buffer[13]=alt_sl_gps.__.B2;
-    Tmp_serial_buffer[14]=alt_sl_gps.__.B1;
-    Tmp_serial_buffer[15]=alt_sl_gps.__.B0;
-    Tmp_serial_buffer[16]=sog_gps._.B1;
-    Tmp_serial_buffer[17]=sog_gps._.B0;
-    Tmp_serial_buffer[18]=cog_gps._.B1;
-    Tmp_serial_buffer[19]=cog_gps._.B0;
-    Tmp_serial_buffer[20]=week_no._.B1;
-    Tmp_serial_buffer[21]=week_no._.B0;
-    Tmp_serial_buffer[22]=tow.__.B3; // MSB first
-    Tmp_serial_buffer[23]=tow.__.B2;
-    Tmp_serial_buffer[24]=tow.__.B1;
-    Tmp_serial_buffer[25]=tow.__.B0;
-    Tmp_serial_buffer[26]=hdop;
-    Tmp_serial_buffer[27]=svs;
-    Tmp_serial_buffer[28]=rmat[0] >> 8;
-    Tmp_serial_buffer[29]=rmat[0];
-    Tmp_serial_buffer[30]=rmat[1] >> 8;
-    Tmp_serial_buffer[31]=rmat[1];
-    Tmp_serial_buffer[32]=rmat[2] >> 8;
-    Tmp_serial_buffer[33]=rmat[2];
-    Tmp_serial_buffer[34]=rmat[3] >> 8;
-    Tmp_serial_buffer[35]=rmat[3];
-    Tmp_serial_buffer[36]=rmat[4] >> 8;
-    Tmp_serial_buffer[37]=rmat[4];
-    Tmp_serial_buffer[38]=rmat[5] >> 8;
-    Tmp_serial_buffer[39]=rmat[5];
-    Tmp_serial_buffer[40]=rmat[6] >> 8;
-    Tmp_serial_buffer[41]=rmat[6];
-    Tmp_serial_buffer[42]=rmat[7] >> 8;
-    Tmp_serial_buffer[43]=rmat[7];
-    Tmp_serial_buffer[44]=rmat[8] >> 8;
-    Tmp_serial_buffer[45]=rmat[8];
-    Tmp_serial_buffer[46]=udb_cpu_load();
-
- 
-    Tmp_serial_buffer[LastIndx+1]=GO_CheckSum(Tmp_serial_buffer, LastIndx);
-    GO_serial_output_bin(LastIndx+2);
+    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx+1);
+    GO_serial_output_bin(Indx+2);
 	return ;
 }
 
-
-void GO_serial_output_time_data_T( void )
-{
-    /*
+void GO_serial_output_dsnav_data_b( void )
+{    /* exec command b: send dsNav params
      The command string is composed by an array of unsigned char:
      0      Header	 @
      1      Id		   0	ASCII	(not used here, just for compatibility)
      2      Cmd		   K 	ASCII
      3      CmdLen	 Num of bytes (bin) following (checksum included)
-		 4-5    utcYear (unsigned short int)
+     4-7    PosXmes current X position coordinate (MSB first)
+     8-11   PosYmes current Y position coordinate (MSB first)
+     12-19  VelInt[4] speed in mm/s as an integer for all the wheels (4 ints)
+     20-27  ADCValue[4] measured current for each motor (4 ints)
+     28     stasis_err number of times imu and wheels very different
+     29     stasis_alarm stasis_alarm
+     */
+
+    int Indx = HEADER_LEN;  // Head length, number of characters in buffer before valid data
+
+    // fill buffer with char struct
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[3]; // PosXmes MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[2];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[1];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[0];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[7]; // PosYmes MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[6];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[5];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[4];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[9]; // VelInt[0] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[8];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[11];// VelInt[1] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[10];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[13];// VelInt[2] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[12];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[15];// VelInt[3] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[14];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[17];// ADCValue[0] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[16];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[19];// ADCValue[1] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[18];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[21];// ADCValue[2] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[20];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[23];// ADCValue[3] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[22];
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[24];// stasis_err number
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[25];// stasis_alarm
+
+    GO_serial_output_header('b', Indx);
+
+    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx+1);
+    GO_serial_output_bin(Indx+2);
+	return ;
+}
+
+void GO_serial_output_time_data_T( void )
+{
+    /* exec command T: send GPS time params
+     The command string is composed by an array of unsigned char:
+     0      Header	 @
+     1      Id		   0	ASCII	(not used here, just for compatibility)
+     2      Cmd		   K 	ASCII
+     3      CmdLen	 Num of bytes (bin) following (checksum included)
+	 4-5    utcYear (unsigned short int)
      6      utcMonth (unsigned char)
      7      utcDay (unsigned char)
      8      utcHour (unsigned char)
@@ -645,44 +698,45 @@ void GO_serial_output_time_data_T( void )
      14     Checksum 0-255	obtained by adding in a 8 bit variable all the bytes composing the message (checksum itself excluded)
      */
 
-    int H = 4; // Head length, number of characters in buffer before valid data
-
-    int LastIndx = 13; //change this value only according to the buffer length
-
-    int Ndata=LastIndx-H+1;//number of valid data=last index-head length+1 (chk)
+    int Indx = HEADER_LEN;  // Head length, number of characters in buffer before valid data
 
     TIMECONV_GetUTCTimeFromGPSfix(week_no.BB, tow.WW,
                                  &TimeS.I.utcYear, &TimeS.I.utcMonth,
                                  &TimeS.I.utcDay, &TimeS.I.utcHour,
                                  &TimeS.I.utcMinute, &TimeS.I.utcSeconds);
 
-    Tmp_serial_buffer[0]= HEADER;
-    Tmp_serial_buffer[1]='0';
-    Tmp_serial_buffer[2]='T';
-    Tmp_serial_buffer[3]= Ndata;
-    Tmp_serial_buffer[4]= TimeS.C[1]; // Year MSB
-    Tmp_serial_buffer[5]= TimeS.C[0]; // Year LSB
-    Tmp_serial_buffer[6]= TimeS.C[2]; // Month
-    Tmp_serial_buffer[7]= TimeS.C[3]; // Day
-    Tmp_serial_buffer[8]= TimeS.C[4]; // Hours
-    Tmp_serial_buffer[9]= TimeS.C[5]; // Minutes
-    Tmp_serial_buffer[10]= TimeS.C[9];// Seconds MSB
-    Tmp_serial_buffer[11]= TimeS.C[8];// Seconds
-    Tmp_serial_buffer[12]= TimeS.C[7];// Seconds
-    Tmp_serial_buffer[13]= TimeS.C[6];// Seconds LSB
+    Tmp_serial_buffer[Indx++]= TimeS.C[1]; // Year MSB
+    Tmp_serial_buffer[Indx++]= TimeS.C[0]; // Year LSB
+    Tmp_serial_buffer[Indx++]= TimeS.C[2]; // Month
+    Tmp_serial_buffer[Indx++]= TimeS.C[3]; // Day
+    Tmp_serial_buffer[Indx++]= TimeS.C[4]; // Hours
+    Tmp_serial_buffer[Indx++]= TimeS.C[5]; // Minutes
+    Tmp_serial_buffer[Indx++]= TimeS.C[9]; // Seconds MSB
+    Tmp_serial_buffer[Indx++]= TimeS.C[8]; // Seconds
+    Tmp_serial_buffer[Indx++]= TimeS.C[7]; // Seconds
+    Tmp_serial_buffer[Indx++]= TimeS.C[6]; // Seconds LSB
 
-    Tmp_serial_buffer[LastIndx+1]=GO_CheckSum(Tmp_serial_buffer, LastIndx);
-    GO_serial_output_bin(LastIndx+2);
+    GO_serial_output_header('T', Indx);
+
+    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx+1);
+    GO_serial_output_bin(Indx+2);
 	return ;
 }
 
+void GO_serial_output_header(char Cmd, int Indx)
+{
+    Tmp_serial_buffer[0]= HEADER;
+    Tmp_serial_buffer[1]= '0';
+    Tmp_serial_buffer[2]= Cmd;
+    Tmp_serial_buffer[3]= Indx - HEADER_LEN;//number of valid data=last index-head length+1 (chk)
+}
 
 // add this binary data to the output buffer according to the GUIOTT protocol
 void GO_serial_output_bin(int BuffLen)
 {
 	int start_index = end_index ;
 	int remaining = SERIAL_BUFFER_SIZE - start_index ;
-  int LenCnt;
+    int LenCnt;
 
 	if (remaining > 1)
 	{
