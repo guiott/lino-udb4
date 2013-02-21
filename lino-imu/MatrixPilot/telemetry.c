@@ -655,13 +655,13 @@ void GO_serial_output_dsnav_data_b( void )
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[6];
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[5];
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[4];
-    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[9]; // VelInt[0] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[9]; // VelInt[0]   MSB
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[8];
-    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[11];// VelInt[1] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[11];// VelInt[1]   MSB
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[10];
-    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[13];// VelInt[2] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[13];// VelInt[2]   MSB
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[12];
-    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[15];// VelInt[3] MSB
+    Tmp_serial_buffer[Indx++]=I2CRxBuff.C[15];// VelInt[3]   MSB
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[14];
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[17];// ADCValue[0] MSB
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[16];
