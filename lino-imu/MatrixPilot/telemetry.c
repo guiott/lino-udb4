@@ -624,10 +624,12 @@ void GO_serial_output_imu_data_K( void )
 
     GO_serial_output_header('K', Indx);
 
-    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx+1);
-    GO_serial_output_bin(Indx+2);
+    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx-1);
+    GO_serial_output_bin(Indx+1);
 	return ;
 }
+
+#define CONSOLE_DEBUG 1 // debug GUI protocol sending back test values without dsNav
 
 void GO_serial_output_dsnav_data_b( void )
 {    /* exec command b: send dsNav params
@@ -645,6 +647,21 @@ void GO_serial_output_dsnav_data_b( void )
      */
 
     int Indx = HEADER_LEN;  // Head length, number of characters in buffer before valid data
+
+#if(CONSOLE_DEBUG == 1) 
+    I2CRxBuff.I.PosXmes += (I2CTxBuff.I.VelDes * 0.1);
+    I2CRxBuff.I.PosYmes += (I2CTxBuff.I.VelDes * 0.05);
+    I2CRxBuff.I.VelInt[0] = I2CTxBuff.I.VelDes;
+    I2CRxBuff.I.VelInt[1] = I2CTxBuff.I.VelDes;
+    I2CRxBuff.I.VelInt[2] = I2CTxBuff.I.VelDes;
+    I2CRxBuff.I.VelInt[3] = I2CTxBuff.I.VelDes;
+    I2CRxBuff.I.ADCValue[0] = abs(I2CTxBuff.I.VelDes)+100;
+    I2CRxBuff.I.ADCValue[1] = abs(I2CTxBuff.I.VelDes)+100;
+    I2CRxBuff.I.ADCValue[2] = abs(I2CTxBuff.I.VelDes)+100;
+    I2CRxBuff.I.ADCValue[3] = abs(I2CTxBuff.I.VelDes)+100;
+    I2CRxBuff.I.stasis_err = 4;
+    I2CRxBuff.I.stasis_alarm = 2;
+#endif
 
     // fill buffer with char struct
     Tmp_serial_buffer[Indx++]=I2CRxBuff.C[3]; // PosXmes MSB
@@ -676,8 +693,8 @@ void GO_serial_output_dsnav_data_b( void )
 
     GO_serial_output_header('b', Indx);
 
-    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx+1);
-    GO_serial_output_bin(Indx+2);
+    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx-1);
+    GO_serial_output_bin(Indx+1);
 	return ;
 }
 
@@ -718,8 +735,8 @@ void GO_serial_output_time_data_T( void )
 
     GO_serial_output_header('T', Indx);
 
-    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx+1);
-    GO_serial_output_bin(Indx+2);
+    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx-1);
+    GO_serial_output_bin(Indx+1);
 	return ;
 }
 
