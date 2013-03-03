@@ -57,6 +57,11 @@ void (* msg_parse ) ( unsigned char inchar ) = &msg_B3 ;
 
 unsigned char un ;
 
+//<GUIOTT>
+union u_intbb UtcYear_gps , UtcSeconds_gps;
+unsigned char UtcMonth_gps , UtcDay_gps , UtcHour_gps , UtcMinute_gps;
+//</GUIOTT>
+
 //union longbbbb xpg_ , ypg_ , zpg_ ;
 //union intbb    xvg_ , yvg_ , zvg_ ;
 //unsigned char  mode1_ , mode2_ ;
@@ -87,6 +92,10 @@ unsigned char * const msg2parse[] = {
 
 union longbbbb lat_gps_ , long_gps_ , alt_sl_gps_ , tow_ ;
 union intbb    nav_valid_ , nav_type_ , sog_gps_ , cog_gps_ , climb_gps_ , week_no_ ;
+//<GUIOTT>
+union u_intbb UtcYear_gps_ , UtcSeconds_gps_;
+unsigned char UtcMonth_gps_ , UtcDay_gps_ , UtcHour_gps_ , UtcMinute_gps_;
+//</GUIOTT>
 unsigned char  hdop_ ;
 union intbb checksum_ ; // included at the end of the GPS message
 
@@ -98,10 +107,12 @@ unsigned char * const msg41parse[] = {
 			&nav_valid_._.B1 , &nav_valid_._.B0 ,
 			&nav_type_._.B1  , &nav_type_._.B0  ,
 			// &un , &un , &un , &un , &un , &un ,
-            &week_no_._.B1  , &week_no_._.B0 ,
-            &tow_.__.B3 , &tow_.__.B2 , &tow_.__.B1 , &tow_.__.B0 ,
-			&un , &un , &un , &un , &un , &un ,
-			&un , &un , &un , &un , &un , &un ,
+      &week_no_._.B1  , &week_no_._.B0 ,
+      &tow_.__.B3 , &tow_.__.B2 , &tow_.__.B1 , &tow_.__.B0 ,
+      &UtcYear_gps_._.B1  , &UtcYear_gps_._.B0 ,
+      &UtcMonth_gps_ , &UtcDay_gps_ , &UtcHour_gps_ , &UtcMinute_gps_ ,
+			&UtcSeconds_gps_._.B1 , &UtcSeconds_gps_._.B0 ,
+			&un , &un , &un , &un ,
 			&lat_gps_.__.B3  , &lat_gps_.__.B2  , &lat_gps_.__.B1  , &lat_gps_.__.B0 ,
 			&long_gps_.__.B3 , &long_gps_.__.B2 , &long_gps_.__.B1 , &long_gps_.__.B0 ,
 			&un , &un , &un , &un ,
@@ -359,6 +370,15 @@ void commit_gps_data(void)
 	cog_gps		= cog_gps_ ;
 	climb_gps	= climb_gps_ ;
 	hdop		= hdop_ ;
+
+  UtcYear_gps = UtcYear_gps_ ;
+  UtcMonth_gps = UtcMonth_gps_ ;
+  UtcDay_gps = UtcDay_gps_ ;
+  UtcHour_gps = UtcHour_gps_ ;
+  UtcMinute_gps = UtcMinute_gps_;
+  UtcSeconds_gps = UtcSeconds_gps_;
+
+
 	//xpg		= xpg_ ;
 	//ypg		= ypg_ ; 
 	//zpg		= zpg_ ;

@@ -31,6 +31,7 @@ struct wwww { int W0 ; int W1 ; int W2 ; int W3 ; } ;
 struct LL { long L0 ; long L1 ; } ;
 
 union intbb { int BB ; struct bb _ ; } ;
+union u_intbb { unsigned int UB ; struct bb _ ; } ;
 union longbbbb { long WW ; struct ww _ ; struct bbbb __ ; } ;
 union longww { long  WW ; struct ww _ ; } ;
 union longlongLL { long long LL ; struct LL _ ; struct wwww __ ; } ;

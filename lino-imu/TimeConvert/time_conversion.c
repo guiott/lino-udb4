@@ -51,7 +51,7 @@ SUCH DAMAGE.
 #include "constants.h"
 
 
-#define TIMECONV_JULIAN_DATE_START_OF_GPS_TIME (2444244.5)  // [days]
+#define TIMECONV_JULIAN_DATE_START_OF_GPS_TIME (double)(2444244.5)  // [days]
 #define TIMECONV_JULIAN_DATE_START_OF_PC_TIME  (2440587.5)  // [days]
 #define TIMECONV_DAYS_IN_JAN 31
 #define TIMECONV_DAYS_IN_MAR 31
@@ -653,7 +653,6 @@ BOOL TIMECONV_GetUTCTimeFromGPSfix(
   // fixed offset between GPS and UTC time
   unsigned char utc_offset = UTC_OFFSET;
   BOOL result;
-
   if( gps_tow < 0.0 || gps_tow > 604800.0 )
   {
     GNSS_ERROR_MSG( "if( gps_tow < 0.0 || gps_tow > 604800.0 )" );

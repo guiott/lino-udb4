@@ -54,6 +54,9 @@ extern struct _TimeS
     float utcSeconds;
 };
 
+extern union u_intbb UtcYear_gps , UtcSeconds_gps;
+extern unsigned char UtcMonth_gps , UtcDay_gps , UtcHour_gps , UtcMinute_gps;
+
 extern union __TimeS
 {
     struct _TimeS I;// to use as integers or chars, little endian LSB first
@@ -94,6 +97,11 @@ extern union __RxBuff
     struct _RxBuff I;// to use as integers or chars, little endian LSB first
     unsigned char C[I2C_BUFF_SIZE_RX];  // to use as bytes to send on I2C buffer
 }I2CRxBuff;
+
+// Communication Watch Dog, if no data arrives for a while set speed to zero for safety
+int CommWd = 0;
+// currently data sent via I2C at 40Hz toward dsNav. 80 means 2 seconds without new data from HLS
+#define COMM_WD_TMO 80
 
 void sio_newMsg(unsigned char);
 void sio_voltage_low( unsigned char inchar ) ;
@@ -294,6 +302,7 @@ unsigned char GO_CheckSum(unsigned char* Buffer, int LastIndx)
 
 void GO_serial_input_nav_data_S(void)
 {// two byte int MSB
+    CommWd = 0; // New data -> Clear comm Watch Dog
     I2CTxBuff.I.VelDes = (RX_serial_buffer[HEADER_LEN] << 8) + (RX_serial_buffer[HEADER_LEN +1]);
     I2CTxBuff.I.YawDes = (RX_serial_buffer[HEADER_LEN+2] << 8) + (RX_serial_buffer[HEADER_LEN +3]);
 }
@@ -717,21 +726,20 @@ void GO_serial_output_time_data_T( void )
 
     int Indx = HEADER_LEN;  // Head length, number of characters in buffer before valid data
 
-    TIMECONV_GetUTCTimeFromGPSfix(week_no.BB, tow.WW,
+    /*TIMECONV_GetUTCTimeFromGPSfix(week_no.BB, (double)tow.WW,
                                  &TimeS.I.utcYear, &TimeS.I.utcMonth,
                                  &TimeS.I.utcDay, &TimeS.I.utcHour,
                                  &TimeS.I.utcMinute, &TimeS.I.utcSeconds);
+    */
 
-    Tmp_serial_buffer[Indx++]= TimeS.C[1]; // Year MSB
-    Tmp_serial_buffer[Indx++]= TimeS.C[0]; // Year LSB
-    Tmp_serial_buffer[Indx++]= TimeS.C[2]; // Month
-    Tmp_serial_buffer[Indx++]= TimeS.C[3]; // Day
-    Tmp_serial_buffer[Indx++]= TimeS.C[4]; // Hours
-    Tmp_serial_buffer[Indx++]= TimeS.C[5]; // Minutes
-    Tmp_serial_buffer[Indx++]= TimeS.C[9]; // Seconds MSB
-    Tmp_serial_buffer[Indx++]= TimeS.C[8]; // Seconds
-    Tmp_serial_buffer[Indx++]= TimeS.C[7]; // Seconds
-    Tmp_serial_buffer[Indx++]= TimeS.C[6]; // Seconds LSB
+    Tmp_serial_buffer[Indx++]= UtcYear_gps._.B1; // Year MSB
+    Tmp_serial_buffer[Indx++]= UtcYear_gps._.B0; // Year LSB
+    Tmp_serial_buffer[Indx++]= UtcMonth_gps; // Month
+    Tmp_serial_buffer[Indx++]= UtcDay_gps; // Day
+    Tmp_serial_buffer[Indx++]= UtcHour_gps; // Hours
+    Tmp_serial_buffer[Indx++]= UtcMinute_gps; // Minutes
+    Tmp_serial_buffer[Indx++]= UtcSeconds_gps._.B1; // Seconds MSB
+    Tmp_serial_buffer[Indx++]= UtcSeconds_gps._.B0; // Seconds
 
     GO_serial_output_header('T', Indx);
 
@@ -780,6 +788,13 @@ void GO_I2C_output_yaw(void)
     matrix_accum.x = rmat[4];
     matrix_accum.y = rmat[1];
     I2CTxBuff.I.YawMes = (int)((float)rect_to_polar16(&matrix_accum))*0.054933633; // Deg x 10 0-3599
+
+    CommWd++; // Communication Watch Dog
+    if (CommWd > COMM_WD_TMO)
+    {
+        I2CTxBuff.I.VelDes = 0; // set speed to 0 for safety if no new commands
+    }
+
     I2C_txDsnav(); // Transmit the navigation parameters to dsNav
 }
 //</GUIOTT>
