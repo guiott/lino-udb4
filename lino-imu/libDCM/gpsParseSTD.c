@@ -58,6 +58,7 @@ void (* msg_parse ) ( unsigned char inchar ) = &msg_B3 ;
 unsigned char un ;
 
 //<GUIOTT>
+union longbbbb SatIdList_gps , Hepe_gps;
 union u_intbb UtcYear_gps , UtcSeconds_gps;
 unsigned char UtcMonth_gps , UtcDay_gps , UtcHour_gps , UtcMinute_gps;
 //</GUIOTT>
@@ -93,6 +94,7 @@ unsigned char * const msg2parse[] = {
 union longbbbb lat_gps_ , long_gps_ , alt_sl_gps_ , tow_ ;
 union intbb    nav_valid_ , nav_type_ , sog_gps_ , cog_gps_ , climb_gps_ , week_no_ ;
 //<GUIOTT>
+union longbbbb SatIdList_gps_ , Hepe_gps_;
 union u_intbb UtcYear_gps_ , UtcSeconds_gps_;
 unsigned char UtcMonth_gps_ , UtcDay_gps_ , UtcHour_gps_ , UtcMinute_gps_;
 //</GUIOTT>
@@ -104,32 +106,39 @@ union intbb calculated_checksum ; // calculated locally
 
 
 unsigned char * const msg41parse[] = {
-			&nav_valid_._.B1 , &nav_valid_._.B0 ,
-			&nav_type_._.B1  , &nav_type_._.B0  ,
-			// &un , &un , &un , &un , &un , &un ,
-      &week_no_._.B1  , &week_no_._.B0 ,
-      &tow_.__.B3 , &tow_.__.B2 , &tow_.__.B1 , &tow_.__.B0 ,
-      &UtcYear_gps_._.B1  , &UtcYear_gps_._.B0 ,
-      &UtcMonth_gps_ , &UtcDay_gps_ , &UtcHour_gps_ , &UtcMinute_gps_ ,
-			&UtcSeconds_gps_._.B1 , &UtcSeconds_gps_._.B0 ,
-			&un , &un , &un , &un ,
-			&lat_gps_.__.B3  , &lat_gps_.__.B2  , &lat_gps_.__.B1  , &lat_gps_.__.B0 ,
-			&long_gps_.__.B3 , &long_gps_.__.B2 , &long_gps_.__.B1 , &long_gps_.__.B0 ,
-			&un , &un , &un , &un ,
-			&alt_sl_gps_.__.B3 , &alt_sl_gps_.__.B2 , &alt_sl_gps_.__.B1 , &alt_sl_gps_.__.B0 ,
-			&un , 
-			&sog_gps_._.B1  , &sog_gps_._.B0 ,
-			&cog_gps_._.B1  , &cog_gps_._.B0 ,
-			&un , &un ,
-			&climb_gps_._.B1  , &climb_gps_._.B0 ,
-			&un , &un , &un , &un , &un , &un , &un , &un , &un , &un ,
-			&un , &un , &un , &un , &un , &un , &un , &un , &un , &un ,
-			&un , &un , &un , &un , &un , &un , &un , &un , &un , &un ,
-			&un , &un , &un , &un , &un , &un , &un , &un , &un , &un ,
-			&svs_ ,
-			&hdop_ ,
-			&un ,
-			&checksum_._.B1 , &checksum_._.B0 } ;
+    &nav_valid_._.B1 , &nav_valid_._.B0 ,
+    &nav_type_._.B1  , &nav_type_._.B0  ,
+    &week_no_._.B1  , &week_no_._.B0 ,
+    &tow_.__.B3 , &tow_.__.B2 , &tow_.__.B1 , &tow_.__.B0 ,
+    &UtcYear_gps_._.B1  , &UtcYear_gps_._.B0 ,
+    &UtcMonth_gps_ , &UtcDay_gps_ , &UtcHour_gps_ , &UtcMinute_gps_ ,
+    &UtcSeconds_gps_._.B1 , &UtcSeconds_gps_._.B0 ,
+    &SatIdList_gps_.__.B3 ,  &SatIdList_gps_.__.B2 , &SatIdList_gps_.__.B1 , &SatIdList_gps_.__.B0 ,
+    &lat_gps_.__.B3  , &lat_gps_.__.B2  , &lat_gps_.__.B1  , &lat_gps_.__.B0 ,
+    &long_gps_.__.B3 , &long_gps_.__.B2 , &long_gps_.__.B1 , &long_gps_.__.B0 ,
+    &un , &un , &un , &un ,                         // Altitude from Ellipsoid
+    &alt_sl_gps_.__.B3 , &alt_sl_gps_.__.B2 , &alt_sl_gps_.__.B1 , &alt_sl_gps_.__.B0 ,
+    &un , // Map Datum
+    &sog_gps_._.B1  , &sog_gps_._.B0 ,
+    &cog_gps_._.B1  , &cog_gps_._.B0 ,
+    &un , &un ,                                     // Magnetic variation
+    &climb_gps_._.B1  , &climb_gps_._.B0 ,
+    &un , &un ,                                     // Heading rate
+    &Hepe_gps_.__.B3 , &Hepe_gps_.__.B2 , &Hepe_gps_.__.B1 , &Hepe_gps_.__.B0 ,
+    &un , &un , &un , &un ,                         // EVPE
+    &un , &un , &un , &un ,                         // ETE
+    &un , &un ,                                     // EHVE
+    &un , &un , &un , &un ,                         // Clock bias
+    &un , &un , &un , &un ,                         // Clock bias error
+    &un , &un , &un , &un ,                         // Clock drift
+    &un , &un , &un , &un ,                         // Clock drift error
+    &un , &un , &un , &un ,                         // Distance
+    &un , &un ,                                     // Distance error
+    &un , &un ,                                     // Heading error
+    &svs_ ,
+    &hdop_ ,
+    &un ,                                           // Additional Mode Info
+    &checksum_._.B1 , &checksum_._.B0 } ;
 
 
 //	if nav_valid is zero, there is valid GPS data that can be used for navigation.
@@ -361,32 +370,25 @@ void msg_B0 ( unsigned char gpschar )
 
 void commit_gps_data(void) 
 {
-	week_no		= week_no_ ;
-	tow			= tow_ ;
-	lat_gps		= lat_gps_ ;
-	long_gps	= long_gps_ ;
-	alt_sl_gps	= alt_sl_gps_ ;
-	sog_gps		= sog_gps_ ; 
-	cog_gps		= cog_gps_ ;
-	climb_gps	= climb_gps_ ;
-	hdop		= hdop_ ;
+    week_no		= week_no_ ;
+    tow			= tow_ ;
+    lat_gps		= lat_gps_ ;
+    long_gps	= long_gps_ ;
+    alt_sl_gps	= alt_sl_gps_ ;
+    sog_gps		= sog_gps_ ;
+    cog_gps		= cog_gps_ ;
+    climb_gps	= climb_gps_ ;
+    hdop		= hdop_ ;
+    SatIdList_gps = SatIdList_gps_;
+    Hepe_gps = Hepe_gps_;
 
-  UtcYear_gps = UtcYear_gps_ ;
-  UtcMonth_gps = UtcMonth_gps_ ;
-  UtcDay_gps = UtcDay_gps_ ;
-  UtcHour_gps = UtcHour_gps_ ;
-  UtcMinute_gps = UtcMinute_gps_;
-  UtcSeconds_gps = UtcSeconds_gps_;
+    UtcYear_gps = UtcYear_gps_ ;
+    UtcMonth_gps = UtcMonth_gps_ ;
+    UtcDay_gps = UtcDay_gps_ ;
+    UtcHour_gps = UtcHour_gps_ ;
+    UtcMinute_gps = UtcMinute_gps_;
+    UtcSeconds_gps = UtcSeconds_gps_;
 
-
-	//xpg		= xpg_ ;
-	//ypg		= ypg_ ; 
-	//zpg		= zpg_ ;
-	//xvg		= xvg_ ; 
-	//yvg		= yvg_ ; 
-	//zvg		= zvg_ ;
-	//mode1		= mode1_ ; 
-	//mode2 	= mode2_ ; 
 	svs			= svs_ ;
 	
 	return ;

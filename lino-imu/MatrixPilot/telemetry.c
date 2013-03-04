@@ -54,6 +54,7 @@ extern struct _TimeS
     float utcSeconds;
 };
 
+extern union longbbbb SatIdList_gps , Hepe_gps;
 extern union u_intbb UtcYear_gps , UtcSeconds_gps;
 extern unsigned char UtcMonth_gps , UtcDay_gps , UtcHour_gps , UtcMinute_gps;
 
@@ -128,6 +129,7 @@ unsigned char GO_CheckSum(unsigned char* Buffer, int LastIndx);
 void GO_serial_output_imu_data_K (void); // exec command K: send IMU params
 void GO_serial_output_dsnav_data_b( void ); // exec command b: send dsNav params
 void GO_serial_output_time_data_T( void ); // exec command T: send GPS time params
+void GO_serial_output_gps_data_G( void );  // exec command G: send GPS service params
 
 void GO_serial_input_nav_data_S(void);   // cmd S: set speed & direction
 
@@ -274,6 +276,10 @@ void GO_cmd_parser(int Cmd)
 
         case 'b':
             GO_serial_output_dsnav_data_b();
+            break;
+
+        case 'G':
+            GO_serial_output_gps_data_G();
             break;
 
         default:
@@ -562,27 +568,22 @@ void GO_serial_output_imu_data_K( void )
      1      Id		   0	ASCII	(not used here, just for compatibility)
      2      Cmd		   K 	ASCII
      3      CmdLen	 Num of bytes (bin) following (checksum included)
-		 4-7    Plane gps latitude shown as the number of degrees times 10 to the power 7 North of the equator. (negative means south).
-		 8-11   Plane gps longitude shown as the number of degrees times 10 to the power 7 East of the Greenwich Meridian
+	 4-7    Plane gps latitude shown as the number of degrees times 10 to the power 7 North of the equator. (negative means south).
+	 8-11   Plane gps longitude shown as the number of degrees times 10 to the power 7 East of the Greenwich Meridian
      12-15  Plane gps altitude in centimeters above mean sea level
      16-17  Speed over the ground from the GPS in meters / second times 100
      18-19  GPS Course over the Ground (2D) of the plane in degrees times 100
-     20-21  Week Number (GPS)
-     22-25  Time in micro seconds since Saturday midnight GMT (GPS)
-     26     hdop
-     27     number of visible satellites
-     28-29  DCM XpXe - rmat[0]
-     30-31  DCM XpYe - rmat[1]
-     32-33  DCM XpZe - rmat[2]
-     34-35  DCM YpXe - rmat[3]
-     36-37  DCM YpYe - rmat[4]
-     38-39  DCM YpZe - rmat[5]
-     40-41  DCM ZpXe - rmat[6]
-     42-43  DCM ZpYe - rmat[7]
-     44-45  DCM ZpZe - rmat[8]
-     46     Percentage of available cpu power that has been used over the last one second.
-     47     Checksum 0-255	obtained by adding in a 8 bit variable all the bytes composing the message (checksum itself excluded)
-     *
+     20-21  DCM XpXe - rmat[0]
+     22-23  DCM XpYe - rmat[1]
+     24-25  DCM XpZe - rmat[2]
+     26-27  DCM YpXe - rmat[3]
+     28-29  DCM YpYe - rmat[4]
+     30-31  DCM YpZe - rmat[5]
+     32-33  DCM ZpXe - rmat[6]
+     34-35  DCM ZpYe - rmat[7]
+     36-27  DCM ZpZe - rmat[8]
+     38     Percentage of available cpu power that has been used over the last one second.
+     39     Checksum 0-255	obtained by adding in a 8 bit variable all the bytes composing the message (checksum itself excluded)
      */
  
     int Indx = HEADER_LEN;  // Head length, number of characters in buffer before valid data
@@ -603,14 +604,6 @@ void GO_serial_output_imu_data_K( void )
     Tmp_serial_buffer[Indx++]=sog_gps._.B0;
     Tmp_serial_buffer[Indx++]=cog_gps._.B1;
     Tmp_serial_buffer[Indx++]=cog_gps._.B0;
-    Tmp_serial_buffer[Indx++]=week_no._.B1;
-    Tmp_serial_buffer[Indx++]=week_no._.B0;
-    Tmp_serial_buffer[Indx++]=tow.__.B3; // MSB first
-    Tmp_serial_buffer[Indx++]=tow.__.B2;
-    Tmp_serial_buffer[Indx++]=tow.__.B1;
-    Tmp_serial_buffer[Indx++]=tow.__.B0;
-    Tmp_serial_buffer[Indx++]=hdop;
-    Tmp_serial_buffer[Indx++]=svs;
     Tmp_serial_buffer[Indx++]=rmat[0] >> 8;
     Tmp_serial_buffer[Indx++]=rmat[0];
     Tmp_serial_buffer[Indx++]=rmat[1] >> 8;
@@ -637,6 +630,50 @@ void GO_serial_output_imu_data_K( void )
     GO_serial_output_bin(Indx+1);
 	return ;
 }
+
+void GO_serial_output_gps_data_G( void )
+{
+    /* exec command G: send GPS services params
+     The command string is composed by an array of unsigned char:
+     0      Header	 @
+     1      Id		   0	ASCII	(not used here, just for compatibility)
+     2      Cmd		   K 	ASCII
+     3      CmdLen	 Num of bytes (bin) following (checksum included)
+     4-5    Week Number (GPS)
+     6-9    Time in micro seconds since Saturday midnight GMT (GPS)
+     10     hdop
+     11     number of visible satellites
+     12-15  Satellite ID list
+     16-19
+     20     Checksum 0-255	obtained by adding in a 8 bit variable all the bytes composing the message (checksum itself excluded)
+     */
+
+    int Indx = HEADER_LEN;  // Head length, number of characters in buffer before valid data
+
+    Tmp_serial_buffer[Indx++]=week_no._.B1;
+    Tmp_serial_buffer[Indx++]=week_no._.B0;
+    Tmp_serial_buffer[Indx++]=tow.__.B3; // MSB first
+    Tmp_serial_buffer[Indx++]=tow.__.B2;
+    Tmp_serial_buffer[Indx++]=tow.__.B1;
+    Tmp_serial_buffer[Indx++]=tow.__.B0;
+    Tmp_serial_buffer[Indx++]=hdop;
+    Tmp_serial_buffer[Indx++]=svs;
+    Tmp_serial_buffer[Indx++]=SatIdList_gps.__.B3; // MSB first
+    Tmp_serial_buffer[Indx++]=SatIdList_gps.__.B2;
+    Tmp_serial_buffer[Indx++]=SatIdList_gps.__.B1;
+    Tmp_serial_buffer[Indx++]=SatIdList_gps.__.B0;
+    Tmp_serial_buffer[Indx++]=Hepe_gps.__.B3; // MSB first
+    Tmp_serial_buffer[Indx++]=Hepe_gps.__.B2;
+    Tmp_serial_buffer[Indx++]=Hepe_gps.__.B1;
+    Tmp_serial_buffer[Indx++]=Hepe_gps.__.B0;
+
+    GO_serial_output_header('G', Indx);
+
+    Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx-1);
+    GO_serial_output_bin(Indx+1);
+	return ;
+}
+
 
 #define CONSOLE_DEBUG 1 // debug GUI protocol sending back test values without dsNav
 
