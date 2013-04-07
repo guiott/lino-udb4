@@ -35,7 +35,7 @@
 
 
 
-#define DSNAV_COMMAND 0X3F
+#define DSNAV_COMMAND 0X24
 
 void I2C_doneRxDsnavData( boolean I2CtrxOK );
 void I2C_doneTxDsnavData( boolean I2CtrxOK );

@@ -64,7 +64,6 @@ boolean I2C2_Busy = true;
 void (* I2C2_state ) ( void ) = &I2C2_idle ;
 
 #define I2C2BRGVAL ( (int)(((1/100e3) - 130E-9) * FREQOSC / CLK_PHASES)-2 ) // 392 // 100 Khz
-
 // #define I2C2BRGVAL 60   //  **** WIP **** orig. def 60, 200 Khz  mod code [ per latest trunk revision]  **** WIP ****
 
 #define I2C2_NORMAL ( (I2C2STAT & 0b0000010011000000) == 0 )    // There is the queue, it's ok if the module is reading
@@ -143,7 +142,7 @@ void I2C2_reset(void)
 void I2C2_trigger_service(void)
 {
         trigger_event(I2C2_service_handle);
-};
+}
 
 
 void serviceI2C2(void)  // service the I2C
@@ -356,7 +355,7 @@ void I2C2_writeCommandData(void)
 
         if ( I2C2_Index >= I2C2_command_data_size)
         {
-                I2C2_Index = 0;                         // Reset index into the buffer
+                I2C2_Index = 0;                  // Reset index into the buffer
 
                 if(I2C2_rx_data_size > 0)
                         I2C2_state = &I2C2_readStart ;                  
@@ -400,7 +399,7 @@ void I2C2_doneWrite(void)
         I2C2_Busy = false;
         if(     pI2C2_callback != NULL)
                 pI2C2_callback(true);
-        I2C2_serve_queue();                                             //  **** NEW QUEUE FEATURE  *****
+        I2C2_serve_queue();                    //  **** NEW QUEUE FEATURE  *****
         return;
 }
 

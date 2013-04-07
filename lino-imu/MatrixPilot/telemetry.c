@@ -675,7 +675,7 @@ void GO_serial_output_gps_data_G( void )
 }
 
 
-#define CONSOLE_DEBUG 1 // debug GUI protocol sending back test values without dsNav
+#define CONSOLE_DEBUG 0 // debug GUI protocol sending back test values without dsNav
 
 void GO_serial_output_dsnav_data_b( void )
 {    /* exec command b: send dsNav params
