@@ -169,7 +169,7 @@ void udb_init(void)
 #endif
 	
 	udb_flags.B = 0 ;
-	
+
 #if (ANALOG_CURRENT_INPUT_CHANNEL != CHANNEL_UNUSED)
 	battery_current.WW = 0 ;
 	battery_mAh_used.WW = 0 ;

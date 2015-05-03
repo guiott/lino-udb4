@@ -32,6 +32,7 @@ void manualPassthrough( void ) ;
 
 //<GUIOTT>
 void GO_I2C_output_yaw(void); // compute and send yaw value to motor controller
+void GO_yaw_offset_calib(void);  // compute the startup value for yaw
 //</GUIOTT>
 
 void init_servoPrepare( void )	// initialize the PWM
@@ -96,6 +97,10 @@ void dcm_servo_callback_prepare_outputs(void)
 	{
 		// otherwise, there is not anything to do
 		manualPassthrough() ;	// Allow manual control while starting up
+
+    //<GUIOTT>
+    GO_yaw_offset_calib();  // compute the startup value for yaw
+    //</GUIOTT>
 	}
 	
 	if ( dcm_flags._.calib_finished ) // start telemetry after calibration
@@ -109,13 +114,13 @@ void dcm_servo_callback_prepare_outputs(void)
 			serial_output_8hz() ;
 		}
 #endif
-	}
 
 //<GUIOTT>
 #if ( SERIAL_INPUT_FORMAT ==  SERIAL_IN_GUIOTT )
     GO_I2C_output_yaw();
 #endif
 //</GUIOTT>
+	}
 
 #if (USE_OSD == 1)
 	osd_run_step() ;

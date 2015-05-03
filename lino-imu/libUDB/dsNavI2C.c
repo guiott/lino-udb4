@@ -36,9 +36,11 @@ struct _TxBuff
 {
     int VelDes; // mean desired speed mm/s
     int YawDes; // desired orientation angle (set point)(Degx10 0-3599)
-    int YawMes; // measured orientation binary angle (process control) (Degx10 0-3599)
+    int YawMesAbs;  // absolute value of measured orientation binary angle (process control) (Degx10 0-3599)
+    int YawMesRel;  // measured orientation binary angle (process control) (Degx10 0-3599) relative to startup position
     char MasterFlag;// to set the dsNav board as a master
     char NewFlag;   // new values sent. Set at the end to close the cycle
+    char OrientFlag;// change the dsNav orientation mode (direct or PID) according to external command
 };
 
 union __TxBuff
@@ -74,7 +76,7 @@ void I2C_txDsnav(void) // Transmit the navigation data to the dsNav board
 
     I2CTxBuff.I.MasterFlag = 1;// to set the dsNav board as a master
     I2CTxBuff.I.NewFlag = 1;   // new values arrived. Set at the end to close the cycle
-    if (TxCount > 3)
+    if (TxCount >= 3)
     {// recall the parameter reception only every 4 TX, i.e.: 25 x 4 = 100ms
         I2C_Write(DSNAV_COMMAND, DsNavWriteIndex, 1, I2CTxBuff.C, I2C_BUFF_SIZE_TX, &I2C_rxDsnav);
         TxCount = 0;

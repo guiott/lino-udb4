@@ -69,9 +69,11 @@ extern struct _TxBuff
 {
     int VelDes; // mean desired speed mm/s
     int YawDes; // desired orientation angle (set point)(Degx10 0-3599)
-    int YawMes; // measured orientation binary angle (process control) (Degx10 0-3599)
+    int YawMesAbs;  // absolute value of measured orientation binary angle (process control) (Degx10 0-3599)
+    int YawMesRel;  // measured orientation binary angle (process control) (Degx10 0-3599) relative to startup position
     char MasterFlag;// to set the dsNav board as a master
     char NewFlag;   // new values sent. Set at the end to close the cycle
+    char OrientFlag;// change the dsNav orientation mode (direct or PID) according to external command
 };
 
 
@@ -80,7 +82,6 @@ extern union __TxBuff
     struct _TxBuff I;// to use as integers or chars, little endian LSB first
     unsigned char C[I2C_BUFF_SIZE_TX];  // to use as bytes to send on I2C buffer
 }I2CTxBuff;
-
 
 // RX Buffer
 extern struct _RxBuff
@@ -98,6 +99,8 @@ extern union __RxBuff
     struct _RxBuff I;// to use as integers or chars, little endian LSB first
     unsigned char C[I2C_BUFF_SIZE_RX];  // to use as bytes to send on I2C buffer
 }I2CRxBuff;
+
+int YawOffset;
 
 // Communication Watch Dog, if no data arrives for a while set speed to zero for safety
 int CommWd = 0;
@@ -134,6 +137,7 @@ void GO_serial_output_gps_data_G( void );  // exec command G: send GPS service p
 void GO_serial_input_nav_data_S(void);   // cmd S: set speed & direction
 
 void GO_I2C_output_yaw(void); // compute and send yaw value to motor controller
+void GO_yaw_offset_calib(void); // to compute the yaw at startup
 void GO_serial_output_header(char Cmd, int Indx); // fill the buffer with heading info
 //</GUIOTT>
 
@@ -311,6 +315,7 @@ void GO_serial_input_nav_data_S(void)
     CommWd = 0; // New data -> Clear comm Watch Dog
     I2CTxBuff.I.VelDes = (RX_serial_buffer[HEADER_LEN] << 8) + (RX_serial_buffer[HEADER_LEN +1]);
     I2CTxBuff.I.YawDes = (RX_serial_buffer[HEADER_LEN+2] << 8) + (RX_serial_buffer[HEADER_LEN +3]);
+    I2CTxBuff.I.OrientFlag = RX_serial_buffer[HEADER_LEN +4];// set the otientation mode on master dsNav (direct or PID)
 }
 //</GUIOTT>
 
@@ -623,7 +628,9 @@ void GO_serial_output_imu_data_K( void )
     Tmp_serial_buffer[Indx++]=rmat[8] >> 8;
     Tmp_serial_buffer[Indx++]=rmat[8];
     Tmp_serial_buffer[Indx++]=udb_cpu_load();
-
+    Tmp_serial_buffer[Indx++]=YawOffset >> 8;
+    Tmp_serial_buffer[Indx++]=YawOffset;
+    
     GO_serial_output_header('K', Indx);
 
     Tmp_serial_buffer[Indx]=GO_CheckSum(Tmp_serial_buffer, Indx-1);
@@ -824,15 +831,25 @@ void GO_I2C_output_yaw(void)
 
     matrix_accum.x = rmat[4];
     matrix_accum.y = rmat[1];
-    I2CTxBuff.I.YawMes = (int)((float)rect_to_polar16(&matrix_accum))*0.054933633; // Deg x 10 0-3599
+    I2CTxBuff.I.YawMesAbs = (int)((float)rect_to_polar16(&matrix_accum))*0.054933633; // Deg x 10 0-3599
+    I2CTxBuff.I.YawMesRel = I2CTxBuff.I.YawMesAbs - YawOffset;
 
     CommWd++; // Communication Watch Dog
     if (CommWd > COMM_WD_TMO)
     {
-        I2CTxBuff.I.VelDes = 0; // set speed to 0 for safety if no new commands
+        I2CTxBuff.I.VelDes = 0X7FFF; // set both wheels speed to 0 for safety if no new commands
     }
 
     I2C_txDsnav(); // Transmit the navigation parameters to dsNav
+}
+
+void GO_yaw_offset_calib(void)
+{// to compute the yaw at startup
+    struct relative2D matrix_accum ;
+    I2CTxBuff.I.VelDes = 0X7FFF; // set both wheels speed to 0 for safety if no new commands
+    matrix_accum.x = rmat[4];
+    matrix_accum.y = rmat[1];
+    YawOffset = (int)((float)rect_to_polar16(&matrix_accum))*0.054933633; // Deg x 10 0-3599
 }
 //</GUIOTT>
 

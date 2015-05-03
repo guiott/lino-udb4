@@ -41,15 +41,13 @@
 
 #include "defines.h"
 
-//	main program for testing the IMU.
-
 int main (void)
 {
 	udb_init() ;
 	dcm_init() ;   
 	init_servoPrepare() ;
 	init_states() ;
-    init_behavior() ;
+  init_behavior() ;
 	init_serial() ;
 
 	udb_run() ;

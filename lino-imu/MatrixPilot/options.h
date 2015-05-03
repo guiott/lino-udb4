@@ -345,7 +345,7 @@
 
 //<GUIOTT>
 // SERIAL_MAGNETOMETER to watch out the raw magnetometer data
-// SERIAL_CONSOLE to autonomously send information at 8Hz to GUIOTT ImuCOnsole Processing program
+// SERIAL_CONSOLE to autonomously send information at 8Hz to GUIOTT ImuConsole Processing program
 // SERIAL_INPUT_FORMAT  GUIOTT receive data on serial port in the format of GUIOTT communication protocol:
 // http://www.guiott.com/Rino/CommandDescr/Protocol.htm
 // 

@@ -26,7 +26,7 @@
  * Created on 5 febbraio 2013, 17.36
  */
 
-#define I2C_BUFF_SIZE_TX 8
+#define I2C_BUFF_SIZE_TX 11
 #define I2C_BUFF_SIZE_RX 26
 
 #ifndef DSNAVI2C_H
@@ -46,6 +46,7 @@ void I2C_txDsnav(void);  // transmit to the dsNav board
 #define I2C_Read                I2C2_Read
 #define I2C_Write               I2C2_Write
 #define I2C_reset               I2C2_reset
+
 
 
 
